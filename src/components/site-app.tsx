@@ -14,11 +14,22 @@ import type { Community } from "@/lib/types";
 import { CommunityProvider } from "./community-provider";
 import { Header, Footer } from "./navigation";
 import { Feed } from "./feed";
-const ArticleDetail = dynamic(() => import("./article-detail").then(module => module.ArticleDetail));
-const Editor = dynamic(() => import("./editor").then(module => module.Editor), {ssr:false});
-const Account = dynamic(() => import("./account").then(module => module.Account));
-const Dashboard = dynamic(() => import("./dashboard").then(module => module.Dashboard));
-const ProfilePage = dynamic(() => import("./dashboard").then(module => module.ProfilePage));
+const ArticleDetail = dynamic(() =>
+  import("./article-detail").then((module) => module.ArticleDetail),
+);
+const Editor = dynamic(
+  () => import("./editor").then((module) => module.Editor),
+  { ssr: false },
+);
+const Account = dynamic(() =>
+  import("./account").then((module) => module.Account),
+);
+const Dashboard = dynamic(() =>
+  import("./dashboard").then((module) => module.Dashboard),
+);
+const ProfilePage = dynamic(() =>
+  import("./dashboard").then((module) => module.ProfilePage),
+);
 
 export function SiteApp({ initial }: { initial: Community }) {
   const pathname = usePathname();
@@ -29,6 +40,7 @@ export function SiteApp({ initial }: { initial: Community }) {
   let content;
   switch (page) {
     case "home":
+    case "community":
       content = <Feed />;
       break;
     case "discover":
@@ -68,7 +80,10 @@ export function SiteApp({ initial }: { initial: Community }) {
       content = <InfoPage guidelines={page === "guidelines"} />;
   }
   return (
-    <CommunityProvider key={pathname + "?" + query + (initial.user?.id || "")} initial={initial}>
+    <CommunityProvider
+      key={pathname + "?" + query + (initial.user?.id || "")}
+      initial={initial}
+    >
       {!auth && <Header />}
       {content}
       {!auth && page !== "write" && <Footer />}

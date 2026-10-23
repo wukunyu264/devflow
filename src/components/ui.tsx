@@ -22,7 +22,7 @@ import type { ReactNode } from "react";
 export function Logo({ small = false }: { small?: boolean }) {
   return (
     <Link
-      href="/"
+      href="/#top"
       className={`brand ${small ? "brand-small" : ""}`}
       aria-label="DevFlow 首页"
     >

@@ -2,13 +2,15 @@
 
 **线上地址：[https://boisterous-cascaron-44d48a.netlify.app](https://boisterous-cascaron-44d48a.netlify.app)**
 
+首页为全屏动态门户；点击「进入技术社区」，或直接打开 [文章信息流](https://boisterous-cascaron-44d48a.netlify.app/community)。首页动画可暂停，并尊重系统的减少动态效果偏好。
+
 源码：[wukunyu264/devflow](https://github.com/wukunyu264/devflow)。实际部署平台为 **Netlify**，数据库与认证为 **Supabase**。
 
 > 以 Netlify Published 对应的提交及 `npm test` 公网检查确认实际发布状态；本地检查与真实云端账号验收分别记录，详见 [ACCEPTANCE.md](./ACCEPTANCE.md)。
 
 ## 5 分钟验收
 
-1. 无痕打开上方链接，匿名浏览首页、分类与文章；无需登录 Netlify。
+1. 无痕打开上方链接，通过「进入技术社区」浏览信息流、分类与文章；无需登录 Netlify。
 2. 注册自己的邮箱账号；如要求验证邮箱，完成验证再登录。发布一篇标题至少 4 字、正文至少 20 字的文章。
 3. 点赞、评论、刷新页面，确认内容与互动仍在；复制文章链接，在另一个无痕窗口阅读。
 4. 使用第二个账号，确认无法编辑、删除第一个账号的文章和评论。
@@ -50,7 +52,7 @@ npm run measure:first-load
 
 ## 实现与结构
 
-保留原有 UI：技术分类、搜索、Markdown 阅读与目录、创作编辑器、草稿、个人主页、点赞/收藏/关注/评论、深色模式与响应式布局。
+独立动态门户首页 + 原有社区页面：技术分类、搜索、Markdown 阅读与目录、创作编辑器、草稿、个人主页、点赞/收藏/关注/评论、深色模式与响应式布局。门户样式使用 CSS Modules 隔离，不修改后续页面的外观。
 
 技术栈：Next.js **16.4.2** App Router、React **19.3.1**、TypeScript strict、手写 CSS、Lucide **1.61.0**、CodeMirror、react-markdown、Zod、Sonner。已移除 Tailwind 构建依赖；保留附 MIT 许可的独立浏览器 reset，保持原有样式。
 
@@ -59,6 +61,7 @@ npm run measure:first-load
 | `src/lib/backend.ts` / `src/instrumentation.ts` | 显式后端选择、启动检查 |
 | `src/lib/store.ts` / `community.ts` / `page-data.ts` | 有界投影、当前文章正文、请求内 React cache |
 | `src/app/[[...path]]/page.tsx` | 路由校验、metadata、Article JSON-LD |
+| `src/components/landing.tsx` / `landing-motion.tsx` / `landing.module.css` | 全屏动态门户、暂停/离屏控制、独立样式 |
 | `src/app/sitemap.ts` / `robots.ts` / `opengraph-image.tsx` | SEO |
 | `supabase/001_schema.sql` / `002_seed.sql` | 新项目建表、原始种子 |
 | `supabase/003_extra_content.sql` | 可选 5 位展示作者 / 20 篇演示文章，无登录账号 |

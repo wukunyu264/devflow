@@ -54,6 +54,12 @@ try {
     await mkdir('test-results',{recursive:true});
     await writeFile('test-results/data-reads.json',JSON.stringify({snapshots,queries,bodyQueries:1},null,2));
     console.log(`Article SSR: ${snapshots} snapshot, ${queries} bounded queries, one article body.`);
+    const portalTraceStart = output.length;
+    const portal = await fetch(testEnv.TEST_BASE_URL).then(response => response.text());
+    await new Promise(resolveFlush => setImmediate(resolveFlush));
+    assert.match(portal, /data-landing-root/);
+    assert.equal((output.slice(portalTraceStart).match(/\[DevFlow query\]/g) || []).length,0,'Portal must not query community data');
+    console.log('Portal SSR: no community database queries; full feed remains at /community.');
     const measurement = spawn(process.execPath,['scripts/measure-first-load.mjs','after-http'],{env:testEnv,stdio:'inherit',windowsHide:true});
     const measured = await new Promise(resolveExit => measurement.on('exit',code => resolveExit(code ?? 1)));
     assert.equal(measured,0,'Production first-load measurement failed');

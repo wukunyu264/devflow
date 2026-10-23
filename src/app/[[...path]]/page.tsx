@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SiteApp } from "@/components/site-app";
+import { Landing } from "@/components/landing";
 import { getPageData } from "@/lib/page-data";
 import { categories } from "@/lib/types";
 import { absoluteUrl } from "@/lib/site";
@@ -9,10 +10,15 @@ import { absoluteUrl } from "@/lib/site";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 type Props = { params: Promise<{ path?: string[] }> };
-const validId = (id?:string) => Boolean(id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+const validId = (id?: string) =>
+  Boolean(
+    id &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
+  );
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { path = [] } = await params;
   const names: Record<string, string> = {
+    community: "技术社区",
     discover: "发现灵感",
     trending: "社区热榜",
     search: "搜索",
@@ -24,6 +30,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     about: "关于社区",
     guidelines: "社区公约",
   };
+  if (path.length === 0)
+    return {
+      title: "让想法，自由生长",
+      description:
+        "把实践写成文章，让经验与更多开发者相遇。进入 DevFlow 技术社区，发现灵感，探索 AI，开始创作。",
+      alternates: { canonical: absoluteUrl("/") },
+      openGraph: {
+        type: "website",
+        title: "DevFlow — 让想法，自由生长",
+        url: absoluteUrl("/"),
+        images: [absoluteUrl("/opengraph-image")],
+      },
+    };
   if (path[0] === "article") {
     if (path.length !== 2 || !validId(path[1])) notFound();
     const data = await getPageData(path[1]);
@@ -32,11 +51,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title: article.title,
       description: article.excerpt,
-      alternates:{canonical:absoluteUrl(`/article/${article.id}`)},
-      openGraph:{type:"article",title:article.title,description:article.excerpt,url:absoluteUrl(`/article/${article.id}`),
-        publishedTime:article.created_at,modifiedTime:article.updated_at,
-        authors:[data.profiles.find(profile => profile.id === article.author_id)?.name || "DevFlow"],images:[absoluteUrl("/opengraph-image")]},
-      robots:article.status === "draft" ? {index:false,follow:false} : undefined,
+      alternates: { canonical: absoluteUrl(`/article/${article.id}`) },
+      openGraph: {
+        type: "article",
+        title: article.title,
+        description: article.excerpt,
+        url: absoluteUrl(`/article/${article.id}`),
+        publishedTime: article.created_at,
+        modifiedTime: article.updated_at,
+        authors: [
+          data.profiles.find((profile) => profile.id === article.author_id)
+            ?.name || "DevFlow",
+        ],
+        images: [absoluteUrl("/opengraph-image")],
+      },
+      robots:
+        article.status === "draft"
+          ? { index: false, follow: false }
+          : undefined,
     };
   }
   if (path[0] === "category")
@@ -44,12 +76,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: categories.find((c) => c.slug === path[1])?.label || "技术分类",
     };
   if (path[0] === "user") return { title: "创作者主页" };
-  return { title: names[path[0]] || "发现值得阅读的技术内容",alternates:{canonical:absoluteUrl("/" + path.join("/"))},
-    robots:["write","login","register","dashboard","bookmarks","search"].includes(path[0]) ? {index:false,follow:false} : undefined };
+  return {
+    title: names[path[0]] || "发现值得阅读的技术内容",
+    alternates: { canonical: absoluteUrl("/" + path.join("/")) },
+    robots: [
+      "write",
+      "login",
+      "register",
+      "dashboard",
+      "bookmarks",
+      "search",
+    ].includes(path[0])
+      ? { index: false, follow: false }
+      : undefined,
+  };
 }
-export default async function Page({ params, searchParams }: Props & {searchParams: Promise<{edit?:string}>}) {
+export default async function Page({
+  params,
+  searchParams,
+}: Props & { searchParams: Promise<{ edit?: string; feed?: string }> }) {
   const { path = [] } = await params;
   const simple = [
+    "community",
     "discover",
     "trending",
     "search",
@@ -67,21 +115,48 @@ export default async function Page({ params, searchParams }: Props & {searchPara
     (path.length === 2 && ["article", "user", "category"].includes(path[0]));
   if (
     !valid ||
-    (["article","user"].includes(path[0]) && !validId(path[1])) ||
+    (["article", "user"].includes(path[0]) && !validId(path[1])) ||
     (path[0] === "category" && !categories.some((c) => c.slug === path[1]))
   )
     notFound();
   const query = await searchParams;
-  const detailId = path[0] === "article" ? path[1] : path[0] === "write" ? query.edit : undefined;
+  // The portal is independent of community data/auth. Keep old following links working.
+  if (path.length === 0 && query.feed !== "following") return <Landing />;
+  const detailId =
+    path[0] === "article"
+      ? path[1]
+      : path[0] === "write"
+        ? query.edit
+        : undefined;
   if (detailId && !validId(detailId)) notFound();
   const initial = await getPageData(detailId);
   if (path[0] === "article" && !initial.article) notFound();
-  if (path[0] === "user" && !initial.profiles.some(profile => profile.id === path[1])) notFound();
+  if (
+    path[0] === "user" &&
+    !initial.profiles.some((profile) => profile.id === path[1])
+  )
+    notFound();
   const article = path[0] === "article" ? initial.article : null;
-  const jsonLd = article?.status === "published" ? {"@context":"https://schema.org","@type":"Article",headline:article.title,
-    description:article.excerpt,datePublished:article.created_at,dateModified:article.updated_at,
-    mainEntityOfPage:absoluteUrl(`/article/${article.id}`),image:absoluteUrl("/opengraph-image"),
-    author:{"@type":"Person",name:initial.profiles.find(profile => profile.id === article.author_id)?.name || "DevFlow"}} : null;
+  const jsonLd =
+    article?.status === "published"
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: article.title,
+          description: article.excerpt,
+          datePublished: article.created_at,
+          dateModified: article.updated_at,
+          mainEntityOfPage: absoluteUrl(`/article/${article.id}`),
+          image: absoluteUrl("/opengraph-image"),
+          author: {
+            "@type": "Person",
+            name:
+              initial.profiles.find(
+                (profile) => profile.id === article.author_id,
+              )?.name || "DevFlow",
+          },
+        }
+      : null;
   return (
     <Suspense
       fallback={
@@ -90,7 +165,14 @@ export default async function Page({ params, searchParams }: Props & {searchPara
         </div>
       }
     >
-      {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd).replaceAll("<","\\u003c")}} />}
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(jsonLd).replaceAll("<", "\\u003c"),
+          }}
+        />
+      )}
       <SiteApp initial={initial} />
     </Suspense>
   );

@@ -17,6 +17,17 @@ test('anonymous list and detail projections, SEO and exact 404 status', async ()
   assert.ok(detail.article.content.length >= 20);
   assert.ok(detail.articles.every(article => !Object.hasOwn(article, 'content')));
   const home = await fetch(base).then(r => r.text());
+  assert.match(home, /data-landing-root/);
+  for (const destination of ['/community','/discover','/category/ai','/write']) {
+    assert.ok(home.includes(`href="${destination}#top"`), 'Portal destination must open at the page top: ' + destination);
+  }
+  assert.ok(!home.includes('class="article-list-panel"'), 'The portal must not be the article feed with a banner');
+  const communityResponse = await fetch(base + '/community');
+  assert.equal(communityResponse.status, 200);
+  assert.match(await communityResponse.text(), /class="article-list-panel"/);
+  const legacyFollowing = await fetch(base + '/?feed=following');
+  assert.equal(legacyFollowing.status, 200);
+  assert.match(await legacyFollowing.text(), /我的关注/);
   assert.ok(!home.includes(JSON.stringify(detail.article.content).slice(1,-1)), 'Home RSC must not serialize article bodies');
   assert.match(home, /id="devflow-theme"/);
   assert.ok(home.indexOf('id="devflow-theme"') < home.indexOf('</head>'));
@@ -45,6 +56,7 @@ test('anonymous list and detail projections, SEO and exact 404 status', async ()
   const sitemap = await sitemapResponse.text();
   assert.ok(sitemap.includes('/article/' + first.id));
   assert.ok(sitemap.includes('/category/ai'));
+  assert.ok(sitemap.includes('/community'));
   const robots = await fetch(base + '/robots.txt');
   assert.equal(robots.status, 200);
   assert.match(await robots.text(), /Sitemap: https?:\/\/.+\/sitemap\.xml/);

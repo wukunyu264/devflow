@@ -57,7 +57,7 @@ export function Header() {
       <div className="topbar-inner">
         <Logo />
         <nav className="desktop-nav" aria-label="主导航">
-          <Link className={pathname === "/" ? "active" : ""} href="/">
+          <Link className={pathname === "/" ? "active" : ""} href="/#top">
             首页
           </Link>
           <Link
@@ -173,7 +173,7 @@ export function Header() {
       </div>
       {mobile && (
         <div className="mobile-menu">
-          <Link href="/">首页</Link>
+          <Link href="/#top">首页</Link>
           <Link href="/discover">发现</Link>
           <Link href="/category/ai">AI 专区</Link>
           <Link href="/bookmarks">我的收藏</Link>
@@ -204,8 +204,8 @@ export function Sidebar() {
       <div className="sidebar-sticky">
         <div className="nav-group">
           <Link
-            className={`side-link ${pathname === "/" && params.get("feed") !== "following" ? "selected" : ""}`}
-            href="/"
+            className={`side-link ${(pathname === "/" || pathname === "/community") && params.get("feed") !== "following" ? "selected" : ""}`}
+            href="/community"
           >
             <Compass size={19} />
             为你推荐
@@ -213,7 +213,7 @@ export function Sidebar() {
           </Link>
           <Link
             className={`side-link ${params.get("feed") === "following" ? "selected" : ""}`}
-            href="/?feed=following"
+            href="/community?feed=following"
           >
             <Users size={19} />
             我的关注
