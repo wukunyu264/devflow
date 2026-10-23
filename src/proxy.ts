@@ -3,6 +3,12 @@ import { validPagePath } from "@/lib/routes";
 
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  // Netlify can run this guard before config redirects; keep the legacy URL here too.
+  if (pathname === "/index") {
+    const home = request.nextUrl.clone();
+    home.pathname = "/";
+    return NextResponse.redirect(home, 301);
+  }
   // Fast syntax checks only: no cookies, authentication, or database round trips.
   if (pathname === "/_not-found" || validPagePath(pathname.split("/").filter(Boolean)))
     return NextResponse.next();

@@ -6,7 +6,8 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:3000';
 test('anonymous list and detail projections, SEO and exact 404 status', async () => {
   const response = await fetch(base + '/api/community');
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get('cache-control'),'private, no-store','Identity-bearing responses must not enter a shared HTTP cache');
+  assert.deepEqual(new Set((response.headers.get('cache-control') || '').split(',').map(value=>value.trim().toLowerCase())),
+    new Set(['private','no-store']),'Identity-bearing responses must not enter a shared HTTP cache');
   assert.match(response.headers.get('content-security-policy') || '',/frame-ancestors 'none'/);
   assert.match(response.headers.get('permissions-policy') || '',/camera=\(\)/);
   const data = await response.json();
