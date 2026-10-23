@@ -5,12 +5,10 @@ import { useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
   Eye,
   EyeOff,
   LockKeyhole,
   Mail,
-  PenLine,
   Sparkles,
   UserRound,
 } from "lucide-react";

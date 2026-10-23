@@ -1,75 +1,80 @@
-# DevFlow — 开发者灵感社区
+# DevFlow — 开发者技术社区
 
-让技术沉淀，让灵感流动。一个可在本地完整运行、支持真实数据持久化的技术博客社区。
+**线上地址：[https://boisterous-cascaron-44d48a.netlify.app](https://boisterous-cascaron-44d48a.netlify.app)**
+
+源码：[wukunyu264/devflow](https://github.com/wukunyu264/devflow)。实际部署平台为 **Netlify**，数据库与认证为 **Supabase**。
+
+> 以 Netlify Published 对应的提交及 `npm test` 公网检查确认实际发布状态；本地检查与真实云端账号验收分别记录，详见 [ACCEPTANCE.md](./ACCEPTANCE.md)。
+
+## 5 分钟验收
+
+1. 无痕打开上方链接，匿名浏览首页、分类与文章；无需登录 Netlify。
+2. 注册自己的邮箱账号；如要求验证邮箱，完成验证再登录。发布一篇标题至少 4 字、正文至少 20 字的文章。
+3. 点赞、评论、刷新页面，确认内容与互动仍在；复制文章链接，在另一个无痕窗口阅读。
+4. 使用第二个账号，确认无法编辑、删除第一个账号的文章和评论。
+5. 查看 [/sitemap.xml](https://boisterous-cascaron-44d48a.netlify.app/sitemap.xml)、[/robots.txt](https://boisterous-cascaron-44d48a.netlify.app/robots.txt)，用 `curl -I` 检查 `/unknown-page` 返回 **404**；切换深色模式后刷新。
 
 ## 本地运行
 
-需要 **Node.js 24 或以上版本**。
+需要 Node.js 24。安装使用锁文件，不改构建方式：
 
 ```powershell
-cd D:\wky\boc
-npm install
+npm ci
 npm run dev
 ```
 
-浏览器打开 **http://localhost:3000**。如端口已被占用，以终端打印的 Local 地址为准。保持运行命令的终端打开；使用 Ctrl+C 停止。
+打开终端提示的地址（默认 `http://localhost:3000`）。后端选择：
 
-本地无需配置任何云服务。首次启动自动创建 `data/devflow.sqlite`，导入 18 篇技术示例文章与 6 位作者。注册你自己的账号即可体验发布、评论、点赞、收藏和关注。SQLite 文件在刷新页面和重启服务后保留。
+- 无云配置的开发环境默认 SQLite，数据保存在 `data/devflow.sqlite`；首次创建 6 位示例作者和 18 篇文章。
+- 配置 Supabase URL/公钥的开发环境使用云数据库；也可显式设置 `DATA_BACKEND=supabase`。
+- 生产环境默认要求 Supabase。自托管且有持久磁盘的 Node 进程可显式用 `DATA_BACKEND=local`；serverless 环境会拒绝 SQLite。
+- `.env.local`、`data/`、`.next/`、`test-results/` 均不提交。云端只使用 publishable/anon key 和用户 JWT，不需要 service_role key。
 
-本地账号与之后的 Supabase 云账号相互独立，不会自动迁移。不要把 `data/` 或任何密钥提交到公共仓库。
-
-## 已实现
-
-- 三栏社区首页、推荐/最新/热门排序、逐批加载、分类和 AI 专区。
-- 全局搜索：标题、摘要、正文、标签与作者；热门标签与作者推荐。
-- Markdown 阅读、代码高亮/复制、表格、图片链接、自动目录、当前章节高亮、阅读进度、阅读时长、相关推荐。
-- 邮箱注册、密码登录、退出、HttpOnly Cookie 会话、登录状态保持。
-- CodeMirror Markdown 编辑、格式工具栏、编辑/分屏/预览、全屏、Ctrl/⌘+S。
-- 保存数据库草稿、浏览器意外退出备份、恢复草稿、分类/标签/摘要/主题封面、发布与更新。
-- 文章管理、删除文章、个人主页与资料编辑、收藏列表。
-- 点赞与取消、收藏与取消、关注与取消、评论与删除自己的评论。
-- 深色模式、手机/平板适配、Toast、加载/空/错误状态、自定义 404 与页面 Metadata。
-- 后端输入验证、来源校验、身份检查、资源归属检查、唯一约束、级联删除。
-- Supabase Auth/数据库适配器，以及完整表结构、权限策略、示例数据 SQL。
-
-技术栈：Next.js 16 App Router、React、TypeScript strict、Tailwind CSS 4、自定义设计组件、Lucide、CodeMirror、react-markdown、Zod、Sonner。核心排版使用 CSS 设计变量；动画使用轻量 CSS，并遵循 reduced-motion 偏好。
+若本机已有云配置但想使用 SQLite，在当前 PowerShell 设置 `$env:DATA_BACKEND='local'` 后运行开发服务。两套账号与数据相互独立。
 
 ## 检查与构建
 
 ```powershell
 npm run typecheck
 npm run build
-# 另一个终端先运行 npm run dev，再运行：
+npm run lint
+npm run test:local
 npm test
+npm run measure:first-load
 ```
 
-集成测试会在**本机 SQLite** 创建测试账号/文章，验证注册、登录、会话撤销、私有草稿、发布持久化、评论、点赞、收藏、关注、跨账号权限和页面访问。测试文章会在测试中删除；测试账号保留用于复查。此测试套件拒绝对 Supabase 模式执行。
+- `build` 始终为 `next build --webpack`；生产启动使用 `npm start`。
+- `test:local` 自动启动生产服务、清空两个 Supabase 变量，使用 `test-results/` 下独立 SQLite，完整验证注册、私有草稿、发布、持久化、互动、跨账号权限、退出、SEO、精确 404。运行前先构建，无需另开开发服务。
+- `npm test` 根据配置选择后端：Supabase 模式只对 `TEST_BASE_URL`（默认线上地址）执行匿名只读验收，明确跳过写入生命周期；本地模式运行完整用例。云端旧版本或迁移缺失时测试会失败，不会伪装通过。
+- `measure:first-load` 从 `.next` 的 client-reference/build manifest 统计入口 JS/CSS、polyfill 和 CSS；每个资源单独 gzip 后求和，排除 HTML/RSC、字体、图片、交互后动态 chunk。详细结果在忽略的 `test-results/`。
 
-生产启动：`npm run build` 后运行 `npm start`。此环境的 Turbopack 生产编译遇到进程兼容问题，生产构建固定采用 Next.js 官方支持的 `--webpack`；开发模式仍使用 Turbopack。
+## 实现与结构
 
-Next.js 的 `loading.tsx` 会提前开始流式响应，所以异步路由中的 `notFound()` 可能保留 HTTP 200，同时返回自定义 404 页面与 `robots=noindex`；测试按此框架行为验证。
+保留原有 UI：技术分类、搜索、Markdown 阅读与目录、创作编辑器、草稿、个人主页、点赞/收藏/关注/评论、深色模式与响应式布局。
 
-## 文件结构
+技术栈：Next.js **16.4.2** App Router、React **19.3.1**、TypeScript strict、手写 CSS、Lucide **1.61.0**、CodeMirror、react-markdown、Zod、Sonner。已移除 Tailwind 构建依赖；保留附 MIT 许可的独立浏览器 reset，保持原有样式。
 
-```text
-src/app/[[...path]]/page.tsx     页面路由和服务端初始数据
-src/app/api/community/route.ts  业务 API、校验与权限
-src/components/                首页、阅读、账号、编辑器、创作中心
-src/lib/store.ts               SQLite / Supabase 数据层
-src/lib/auth.ts                本地密码哈希与 Cookie / Supabase 会话
-src/lib/seed.ts                18 篇文章、6 位作者的示例数据
-supabase/001_schema.sql        PostgreSQL 表、索引、RLS、触发器
-supabase/002_seed.sql          云端示例内容
-tests/community.test.mjs       本地集成测试
-DEPLOYMENT.md                  从零配置 Supabase 与 Vercel
-```
+| 文件 | 用途 |
+| --- | --- |
+| `src/lib/backend.ts` / `src/instrumentation.ts` | 显式后端选择、启动检查 |
+| `src/lib/store.ts` / `community.ts` / `page-data.ts` | 有界投影、当前文章正文、请求内 React cache |
+| `src/app/[[...path]]/page.tsx` | 路由校验、metadata、Article JSON-LD |
+| `src/app/sitemap.ts` / `robots.ts` / `opengraph-image.tsx` | SEO |
+| `supabase/001_schema.sql` / `002_seed.sql` | 新项目建表、原始种子 |
+| `supabase/003_extra_content.sql` | 可选 5 位展示作者 / 20 篇演示文章，无登录账号 |
+| `supabase/004_production_hardening.sql` | 现有库升级：列表视图、持久限流、会话校验、阅读去重 |
+| `DEPLOYMENT.md` / `ACCEPTANCE.md` | Netlify 部署、人类操作与验收证据 |
 
-## 部署前须知
+## 已知限制
 
-详细步骤见 [DEPLOYMENT.md](./DEPLOYMENT.md)。Vercel 运行环境不使用本机 SQLite，需要先配置 Supabase。项目不会把临时文件系统或浏览器缓存当作云端数据库。
+- 账号后台与真实邮箱操作由维护者完成。公开版本以部署后 `npm test` 和双账号流程确认，不能仅凭本地通过判断。
+- 主题脚本位于 head 且在 body 绘制前执行，但 React 把 stylesheet 排到脚本前，因此字面“脚本在 CSS 前”的要求尚未达到；深色偏好逻辑已测试，真实浏览器无白闪仍需确认。
+- 社区快照最多 200 篇文章、200 位作者，互动表最多各 500 行；搜索范围为标题、摘要、标签与作者，不再搜索正文。大规模分页与全文搜索不属于本次范围。sitemap 以 500 条一批读取全部已发布文章。
+- 一篇文章页只有一次社区快照装载，metadata 与 Page 共享；该快照仍由多个有界表查询组成，不能称为“一条 SQL”。
+- 阅读量仅统计登录用户，每用户/文章/UTC 日期最多一次；匿名阅读正常展示，不增加计数。
+- 云端 access JWT 不能靠清 Cookie 即时失效。迁移通过 `auth.sessions` 检查及 restrictive RLS 拒绝已退出会话；GoTrue 退出失败不会被报告成功。自然过期的 SSR 会话不会写 Cookie，需重新登录或由 API 刷新。
+- 注册使用中性失败提示，不显示邮箱是否已注册；未承诺整个认证服务在状态码和时序上完全不可枚举。
+- `categories` 作为文章外键约束保留；`tags/article_tags` 由触发器同步，作为规范化关系保留，当前 UI 不查询它们。未使用的 `articles_search` GIN 索引在迁移中移除。
+- 示例身份不是可登录账号，早期种子的阅读/点赞是演示指标；AI 专区是内容分类，没有调用模型服务。正文图片仅支持外部 URL，没有文件上传。
 
-示例文章的初始阅读量、历史点赞量是演示种子指标；后续用户点赞、收藏、评论等真实写入数据库。AI 专区是内容分类，未连接模型 API。封面采用原创代码图形主题；正文可引用外部图片 URL，未提供文件上传和头像上传。
-
-Supabase SQL 和云端适配器已提供；在创建实际 Supabase 项目、执行 SQL 并配置环境变量以前，不能认为云端认证、RLS 和线上发布已经验收。当前内容检索在加载的文章中完成；更大规模社区应改为数据库分页与搜索服务。
-
-官方参考：[Next.js 安装](https://nextjs.org/docs/app/getting-started/installation)、[Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)、[Vercel CLI 部署](https://vercel.com/docs/projects/deploy-from-cli)。
+部署请按 [DEPLOYMENT.md](./DEPLOYMENT.md)；当前 `vercel.json` 仅为可选平台的历史备用配置，Netlify 不使用它。

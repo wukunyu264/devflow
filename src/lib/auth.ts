@@ -48,7 +48,7 @@ export async function newLocalSession(id: string) {
   ).run(digest(token), id, new Date(Date.now() + 30 * 86400000).toISOString());
   await setSession(token);
 }
-export async function context(): Promise<{
+export async function context(writeCookies = true): Promise<{
   user: Profile | null;
   store: Store;
 }> {
@@ -62,7 +62,7 @@ export async function context(): Promise<{
     userId = data.user?.id;
     if (error) {
       const refresh = jar.get("df_refresh")?.value;
-      if (refresh) {
+      if (refresh && writeCookies) {
         const result = await auth.auth.refreshSession({
           refresh_token: refresh,
         });
@@ -79,6 +79,11 @@ export async function context(): Promise<{
       .get(digest(token), new Date().toISOString());
     userId = row?.user_id as string | undefined;
   }
+  if (isCloud && userId && token) {
+    const {data,error} = await cloudClient(token).rpc("devflow_session_active");
+    if (error) throw new Error("Session validation unavailable. Apply supabase/004_production_hardening.sql.");
+    if (data !== true) userId = undefined;
+  }
   const store = new Store(userId ? token : undefined);
   const user = userId
     ? ((await store.list<Profile>("profiles", { id: userId }))[0] ?? null)
@@ -92,8 +97,29 @@ export async function logout() {
     (await localDatabase())
       .prepare("DELETE FROM sessions WHERE id = ?")
       .run(digest(token));
-  if (token && isCloud)
-    await cloudClient(token).auth.admin.signOut(token, "local");
+  if (token && isCloud) {
+    // GoTrue's /logout endpoint accepts the user's JWT and the publishable key.
+    // No admin/service-role credential is used. Do not report success on failure.
+    const auth = cloudClient();
+    let activeToken = token;
+    const verified = await auth.auth.getUser(activeToken);
+    if (verified.error) {
+      const refresh = jar.get("df_refresh")?.value;
+      if (refresh) {
+        const renewed = await auth.auth.refreshSession({refresh_token:refresh});
+        if (renewed.error && (![400,401,403].includes(renewed.error.status ?? 0))) throw new Error("云端退出暂时失败，请重试。");
+        activeToken = renewed.data.session?.access_token || "";
+      } else if (![401,403,404].includes(verified.error.status ?? 0)) {
+        throw new Error("云端退出暂时失败，请重试。");
+      } else activeToken = "";
+    }
+    if (activeToken) {
+      const {error} = await auth.auth.admin.signOut(activeToken, "local");
+      const revoked = await cloudClient(activeToken).rpc("devflow_session_active");
+      if (revoked.error || revoked.data !== false || (error && ![401,403,404].includes(error.status ?? 0)))
+        throw new Error("云端会话尚未确认撤销，请重试退出。");
+    }
+  }
   jar.delete("df_session");
   jar.delete("df_refresh");
 }

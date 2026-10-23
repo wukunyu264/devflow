@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import "./reset.css";
 
 :root {
   --bg: #f6f7f9;

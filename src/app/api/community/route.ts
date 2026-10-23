@@ -13,6 +13,7 @@ import {
 import { cloudClient, isCloud, localDatabase, Store } from "@/lib/store";
 import { getCommunity } from "@/lib/community";
 import type { Article, Comment, Profile, Reaction, Follow } from "@/lib/types";
+import { takeAuthAttempt } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,20 +79,6 @@ const articleSchema = z
         path: ["content"],
       });
   });
-const loginAttempts = new Map<string, { count: number; until: number }>();
-function rateLimit(key: string) {
-  const now = Date.now();
-  if (loginAttempts.size > 1000)
-    for (const [k, v] of loginAttempts)
-      if (v.until < now) loginAttempts.delete(k);
-  const entry = loginAttempts.get(key);
-  if (entry && entry.until > now && entry.count >= 12)
-    throw new HttpError("尝试次数过多，请 15 分钟后再试。", 429);
-  loginAttempts.set(key, {
-    count: entry && entry.until > now ? entry.count + 1 : 1,
-    until: entry && entry.until > now ? entry.until : now + 900000,
-  });
-}
 function failure(error: unknown) {
   if (error instanceof ZodError)
     return NextResponse.json(
@@ -112,10 +99,11 @@ function failure(error: unknown) {
     { status: 500 },
   );
 }
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const { store, user } = await context();
-    return NextResponse.json(await getCommunity(store, user), {
+    const articleId = request.nextUrl.searchParams.get("article");
+    return NextResponse.json(await getCommunity(store, user, articleId ? uuid.parse(articleId) : undefined), {
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch (error) {
@@ -138,7 +126,7 @@ export async function POST(request: NextRequest) {
     const action = z.string().parse(body.action);
     if (action === "login" || action === "register") {
       const input = credentials.parse(body);
-      rateLimit(input.email.toLowerCase());
+      if (!(await takeAuthAttempt(input.email))) throw new HttpError("尝试次数过多，请 15 分钟后再试。", 429);
       if (isCloud) {
         const client = cloudClient();
         const result =
@@ -156,7 +144,7 @@ export async function POST(request: NextRequest) {
           throw new HttpError(
             action === "login"
               ? "邮箱或密码错误，或邮箱尚未验证。"
-              : "注册失败，邮箱可能已注册或请求过于频繁。",
+              : "注册请求暂时无法完成，请稍后重试或尝试登录。",
           );
         if (!result.data.session)
           return NextResponse.json({
@@ -182,7 +170,7 @@ export async function POST(request: NextRequest) {
               .prepare("SELECT user_id FROM credentials WHERE email = ?")
               .get(input.email)
           )
-            throw new HttpError("这个邮箱已经注册，请直接登录。");
+            throw new HttpError("注册请求暂时无法完成，请稍后重试或尝试登录。");
           const id = randomUUID();
           const hash = await passwordHash(input.password);
           db.exec("BEGIN");
@@ -225,7 +213,8 @@ export async function POST(request: NextRequest) {
     }
     const { user, store } = await context();
     if (action === "view") {
-      await store.view(uuid.parse(body.id));
+      const id = uuid.parse(body.id);
+      if (user) await store.view(id, user.id);
       return NextResponse.json({ success: true });
     }
     if (!user) throw new HttpError("登录后即可参与社区。", 401);

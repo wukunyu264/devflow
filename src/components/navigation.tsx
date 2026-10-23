@@ -24,10 +24,8 @@ import {
   Database,
   Wrench,
   Network,
-  Rss,
   X,
   Menu,
-  Home,
   ArrowRight,
 } from "lucide-react";
 import { useCommunity } from "./community-provider";
@@ -43,13 +41,6 @@ export function Header() {
   const [menu, setMenu] = useState(false);
   const [mobile, setMobile] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    setMenu(false);
-    setMobile(false);
-  }, [pathname]);
-  useEffect(() => {
-    setSearch(params.get("q") || "");
-  }, [params]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {

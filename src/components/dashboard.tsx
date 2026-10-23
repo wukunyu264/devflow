@@ -4,13 +4,10 @@ import { useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
-  BarChart3,
-  BookOpen,
   Bookmark,
   Check,
   Eye,
   FileText,
-  Heart,
   PenLine,
   Plus,
   ThumbsUp,
@@ -21,12 +18,12 @@ import { useCommunity } from "./community-provider";
 import { Avatar, Empty, formatCount, formatDate, Modal, Spinner } from "./ui";
 import { Sidebar } from "./navigation";
 import { ArticleCard } from "./feed";
-import type { Article } from "@/lib/types";
+import type { ArticleSummary } from "@/lib/types";
 
 export function Dashboard() {
   const { data, loading, act } = useCommunity();
   const [tab, setTab] = useState("published");
-  const [deleting, setDeleting] = useState<Article | null>(null);
+  const [deleting, setDeleting] = useState<ArticleSummary | null>(null);
   const [busy, setBusy] = useState(false);
   const own = data.articles.filter((a) => a.author_id === data.user?.id);
   const published = own.filter((a) => a.status === "published");

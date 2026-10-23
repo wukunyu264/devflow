@@ -33,7 +33,6 @@ create index articles_published_date on public.articles(created_at desc) where s
 create index articles_author on public.articles(author_id);
 create index articles_category on public.articles(category, created_at desc);
 create index articles_tags on public.articles using gin(tags);
-create index articles_search on public.articles using gin(to_tsvector('simple',title || ' ' || excerpt));
 create table public.tags (id uuid primary key default gen_random_uuid(), name text not null unique check (char_length(name) between 1 and 20));
 create table public.article_tags (article_id uuid references public.articles(id) on delete cascade, tag_id uuid references public.tags(id) on delete cascade, primary key(article_id, tag_id));
 create table public.likes (id uuid primary key default gen_random_uuid(), article_id uuid not null references public.articles(id) on delete cascade, user_id uuid not null references public.profiles(id) on delete cascade, created_at timestamptz not null default now(), unique(article_id,user_id));
@@ -131,6 +130,6 @@ grant insert,update on public.profiles to authenticated;
 grant insert,update,delete on public.articles to authenticated;
 grant insert,delete on public.likes,public.bookmarks,public.comments,public.follows to authenticated;
 revoke all on function public.increment_article_views(uuid) from public;
-grant execute on function public.increment_article_views(uuid) to anon,authenticated;
+grant execute on function public.increment_article_views(uuid) to authenticated;
 revoke all on function public.on_user_created(),public.sync_article_tags(),public.protect_article_metadata(),public.set_updated_at() from public;
 commit;

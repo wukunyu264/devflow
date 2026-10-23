@@ -39,6 +39,10 @@ const article = {
 };
 test("local community lifecycle, persistence and authorization", async (t) => {
   const initial = await state("");
+  if (initial.mode === "supabase") {
+    t.skip("Supabase lifecycle is not mutated by automated smoke tests. Full lifecycle: npm run test:local");
+    return;
+  }
   assert.equal(
     initial.mode,
     "local",
@@ -93,6 +97,7 @@ test("local community lifecycle, persistence and authorization", async (t) => {
         "",
       );
       assert.equal(duplicate.response.status, 400);
+      assert.doesNotMatch(duplicate.result.error, /已注册|已经注册/);
     },
   );
   await t.test("short drafts save and remain private", async () => {
@@ -103,6 +108,9 @@ test("local community lifecycle, persistence and authorization", async (t) => {
     ownId = result.id;
     assert.ok((await state()).articles.some((a) => a.id === ownId));
     assert.ok(!(await state("")).articles.some((a) => a.id === ownId));
+    const privateDetail = await fetch(`${base}/api/community?article=${ownId}`).then(r => r.json());
+    assert.equal(privateDetail.article, null);
+    assert.equal((await fetch(`${base}/article/${ownId}`)).status, 404);
     assert.equal(
       (
         await call("saveArticle", {
@@ -117,6 +125,14 @@ test("local community lifecycle, persistence and authorization", async (t) => {
       400,
     );
   });
+  await t.test("anonymous views do not count and signed-in daily views deduplicate", async () => {
+    const before = (await state("")).articles.find(a => a.id === sample.id).views;
+    assert.equal((await call("view",{id:sample.id},"")).response.status,200);
+    assert.equal((await state("")).articles.find(a => a.id === sample.id).views,before);
+    assert.equal((await call("view",{id:sample.id})).response.status,200);
+    assert.equal((await call("view",{id:sample.id})).response.status,200);
+    assert.equal((await state("")).articles.find(a => a.id === sample.id).views,before+1);
+  });
   await t.test(
     "publish a saved draft and re-query stored content",
     async () => {
@@ -125,7 +141,9 @@ test("local community lifecycle, persistence and authorization", async (t) => {
           .response.status,
         200,
       );
-      const stored = (await state("")).articles.find((a) => a.id === ownId);
+      const detailResponse = await fetch(`${base}/api/community?article=${ownId}`);
+      assert.equal(detailResponse.status, 200);
+      const stored = (await detailResponse.json()).article;
       assert.equal(stored.title, article.title);
       assert.equal(stored.content, article.content);
     },
@@ -271,11 +289,17 @@ test("local community lifecycle, persistence and authorization", async (t) => {
       for (const path of ["/unknown-page", "/category/invalid"]) {
         const missing = await fetch(base + path);
         const html = await missing.text();
-        // Next.js streams loading.tsx before async params resolve, retaining status 200.
-        assert.ok([200, 404].includes(missing.status));
+        assert.equal(missing.status, 404);
         assert.match(html, /灵感还在，页面走丢了/);
         assert.match(html, /name="robots" content="noindex"/);
       }
     },
   );
+  await t.test("authentication attempts persist in a shared SQLite window", async () => {
+    const limitedEmail = `limit-${email}`;
+    for (let attempt=0; attempt<13; attempt++) {
+      const result = await call("login", {email:limitedEmail,password:"wrong-password"}, "");
+      assert.equal(result.response.status, attempt<12 ? 401 : 429);
+    }
+  });
 });

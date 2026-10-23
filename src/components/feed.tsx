@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -18,9 +18,7 @@ import {
   Flame,
   Code2,
   Zap,
-  Users,
   Compass,
-  Filter,
   Hash,
 } from "lucide-react";
 import { useCommunity } from "./community-provider";
@@ -30,14 +28,12 @@ import {
   Empty,
   formatCount,
   formatDate,
-  TextLink,
-  Spinner,
 } from "./ui";
-import type { Article } from "@/lib/types";
+import type { ArticleSummary } from "@/lib/types";
 import { categories } from "@/lib/types";
 import { Sidebar } from "./navigation";
 
-export function ArticleCard({ article }: { article: Article }) {
+export function ArticleCard({ article }: { article: ArticleSummary }) {
   const { data, act } = useCommunity();
   const [busy, setBusy] = useState(false);
   const author = data.profiles.find((p) => p.id === article.author_id);
@@ -345,17 +341,13 @@ export function Feed({
   kind?: "home" | "trending" | "discover" | "search" | "category" | "bookmarks";
   category?: string;
 }) {
-  const { data, loading } = useCommunity();
+  const { data } = useCommunity();
   const params = useSearchParams();
   const [sort, setSort] = useState(kind === "trending" ? "hot" : "recommend");
   const [visible, setVisible] = useState(7);
   const q = params.get("q") || "";
   const tag = params.get("tag") || "";
   const following = params.get("feed") === "following";
-  useEffect(() => {
-    setVisible(7);
-    setSort(kind === "trending" ? "hot" : "recommend");
-  }, [kind, category, q, tag, following]);
   const list = useMemo(() => {
     let result = data.articles.filter((a) => a.status === "published");
     if (category) result = result.filter((a) => a.category === category);
@@ -374,7 +366,7 @@ export function Feed({
       const words = q.toLowerCase().split(/\s+/).filter(Boolean);
       result = result.filter((a) =>
         words.every((word) =>
-          `${a.title} ${a.excerpt} ${a.content} ${a.tags.join(" ")} ${data.profiles.find((p) => p.id === a.author_id)?.name || ""}`
+          `${a.title} ${a.excerpt} ${a.tags.join(" ")} ${data.profiles.find((p) => p.id === a.author_id)?.name || ""}`
             .toLowerCase()
             .includes(word),
         ),

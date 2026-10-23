@@ -37,6 +37,7 @@ export type Comment = {
   content: string;
   created_at: string;
 };
+export type ArticleSummary = Omit<Article, "content"> & { reading_minutes: number };
 export type Reaction = {
   id: string;
   article_id: string;
@@ -50,7 +51,8 @@ export type Follow = {
   created_at: string;
 };
 export type Community = {
-  articles: Article[];
+  articles: ArticleSummary[];
+  article: Article | null;
   profiles: Profile[];
   comments: Comment[];
   likes: Reaction[];

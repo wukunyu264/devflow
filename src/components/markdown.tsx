@@ -1,7 +1,8 @@
 "use client";
 import Markdown from "react-markdown";
+import Image from "next/image";
 import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
+import rehypeHighlight from "@/lib/highlight";
 import { Check, Copy } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -105,9 +106,9 @@ export function MarkdownContent({ content }: { content: string }) {
               {children}
             </a>
           ),
-          img: ({ alt, ...props }) => (
-            <img {...props} alt={alt || "文章配图"} loading="lazy" />
-          ),
+          img: ({ alt, src }) => typeof src === "string" ? (
+            <Image src={src} alt={alt || "文章配图"} width={1200} height={800} unoptimized loading="lazy" style={{width:"100%",height:"auto"}} />
+          ) : null,
           table: ({ children }) => (
             <div className="table-scroll">
               <table>{children}</table>

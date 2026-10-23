@@ -5,37 +5,43 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build --webpack",
-    "start": "next start --hostname 0.0.0.0",
+    "start": "node scripts/start.mjs --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/*.test.mjs",
-    "seed:sql": "node --experimental-strip-types scripts/generate-seed.mts"
+    "test": "node scripts/run-tests.mjs",
+    "test:local": "node scripts/run-tests.mjs --local",
+    "seed:sql": "node --experimental-strip-types scripts/generate-seed.mts",
+    "lint": "eslint . --max-warnings 0",
+    "measure:first-load": "node scripts/measure-first-load.mjs after --manifest"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.3.0",
     "@codemirror/view": "^6.43.15",
     "@supabase/supabase-js": "^2.0.0",
-    "@tailwindcss/postcss": "^4.0.0",
     "@uiw/react-codemirror": "^4.23.0",
-    "lucide-react": "latest",
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest",
+    "highlight.js": "11.11.2",
+    "lowlight": "3.3.0",
+    "lucide-react": "1.61.0",
+    "next": "16.4.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "react-markdown": "^10.1.0",
-    "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.0",
-    "tailwindcss": "^4.0.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
     "@types/hast": "^3.0.5",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "eslint": "^10.13.0",
+    "eslint-config-next": "16.4.2",
     "prettier": "^3.9.10",
     "typescript": "^5.9.0"
   },
   "engines": {
     "node": ">=24.0.0"
-  }
+  },
+  "type": "module"
 }

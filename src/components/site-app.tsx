@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -13,13 +14,15 @@ import type { Community } from "@/lib/types";
 import { CommunityProvider } from "./community-provider";
 import { Header, Footer } from "./navigation";
 import { Feed } from "./feed";
-import { ArticleDetail } from "./article-detail";
-import { Editor } from "./editor";
-import { Account } from "./account";
-import { Dashboard, ProfilePage } from "./dashboard";
+const ArticleDetail = dynamic(() => import("./article-detail").then(module => module.ArticleDetail));
+const Editor = dynamic(() => import("./editor").then(module => module.Editor), {ssr:false});
+const Account = dynamic(() => import("./account").then(module => module.Account));
+const Dashboard = dynamic(() => import("./dashboard").then(module => module.Dashboard));
+const ProfilePage = dynamic(() => import("./dashboard").then(module => module.ProfilePage));
 
 export function SiteApp({ initial }: { initial: Community }) {
   const pathname = usePathname();
+  const query = useSearchParams().toString();
   const segments = pathname.split("/").filter(Boolean);
   const page = segments[0] || "home";
   const auth = page === "login" || page === "register";
@@ -65,7 +68,7 @@ export function SiteApp({ initial }: { initial: Community }) {
       content = <InfoPage guidelines={page === "guidelines"} />;
   }
   return (
-    <CommunityProvider initial={initial}>
+    <CommunityProvider key={pathname + "?" + query + (initial.user?.id || "")} initial={initial}>
       {!auth && <Header />}
       {content}
       {!auth && page !== "write" && <Footer />}

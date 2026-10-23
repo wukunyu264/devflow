@@ -3,7 +3,8 @@ import { existsSync, readFileSync } from "node:fs";
 
 // Inspect staged blobs, never print their contents or credentials.
 const git = (...args) => execFileSync("git", args, { encoding: "utf8", maxBuffer: 5 * 1024 * 1024 });
-const files = git("diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z").split("\0").filter(Boolean);
+const worktree = process.argv.includes("--worktree");
+const files = (worktree ? git("ls-files", "--cached", "--others", "--exclude-standard", "-z") : git("diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z")).split("\0").filter(Boolean).filter(file => !worktree || existsSync(file));
 if (!files.length) {
   console.error("No staged files to inspect. Stage the intended source files first.");
   process.exit(1);
@@ -21,7 +22,7 @@ const secretPattern = /(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{30,
 const failures = [];
 for (const file of files) {
   if (forbiddenPath.test(file)) { failures.push(`${file}: forbidden private/generated path`); continue; }
-  const text = git("show", `:${file}`);
+  const text = worktree ? readFileSync(file,"utf8") : git("show", `:${file}`);
   if (secretPattern.test(text) || values.some(value => text.includes(value))) failures.push(`${file}: possible credential found`);
   if (file === ".env.example" && text.split(/\r?\n/).some(line => /^\s*[A-Z_][A-Z0-9_]*\s*=\s*\S/.test(line))) failures.push(`${file}: template must contain empty values only`);
 }
@@ -30,5 +31,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(`PASS: ${files.length} staged files checked; no environment files, local database, or matching credentials staged.`);
+  console.log(`PASS: ${files.length} ${worktree ? "worktree" : "staged"} files checked; no private/generated paths or matching credentials found.`);
 }

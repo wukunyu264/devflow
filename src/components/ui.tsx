@@ -16,7 +16,7 @@ import {
   LoaderCircle,
   BookOpen,
 } from "lucide-react";
-import type { Article, Profile } from "@/lib/types";
+import type { Article, ArticleSummary, Profile } from "@/lib/types";
 import type { ReactNode } from "react";
 
 export function Logo({ small = false }: { small?: boolean }) {
@@ -187,8 +187,8 @@ export function formatDate(value: string) {
     timeZone: "Asia/Shanghai",
   });
 }
-export function readTime(article: Article) {
-  return Math.max(2, Math.ceil(article.content.length / 450));
+export function readTime(article: Article | ArticleSummary) {
+  return "reading_minutes" in article ? article.reading_minutes : Math.max(2, Math.ceil(article.content.length / 450));
 }
 export function TextLink({
   href,

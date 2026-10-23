@@ -7,15 +7,13 @@ import { markdown } from "@codemirror/lang-markdown";
 import { EditorView } from "@codemirror/view";
 import {
   ArrowLeft,
-  ArrowUpRight,
   Bold,
   Check,
-  ChevronDown,
   Code2,
   Columns2,
   Eye,
   Heading2,
-  Image,
+  Image as ImageIcon,
   Italic,
   Link2,
   List,
@@ -25,13 +23,12 @@ import {
   Quote,
   Save,
   Send,
-  Settings2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { request, useCommunity } from "./community-provider";
 import { Cover, Empty, Modal, Spinner } from "./ui";
-import { MarkdownContent } from "./markdown";
+import { MarkdownContent } from "./markdown-lazy";
 import { categories, type Article } from "@/lib/types";
 
 const CodeMirror = dynamic(
@@ -62,60 +59,33 @@ export function Editor() {
   const router = useRouter();
   const params = useSearchParams();
   const editId = params.get("edit");
-  const [fields, setFields] = useState<DraftFields>(blank);
+  const current = data.article?.id === editId ? data.article : undefined;
+  const backupKey = `df-draft-${data.user?.id}-${editId || "new"}`;
+  const [start] = useState(() => {
+    const baseline: DraftFields = current ? {title:current.title,content:current.content,category:current.category,tags:current.tags.join(", "),excerpt:current.excerpt,cover:current.cover} : blank;
+    try {
+      const raw = localStorage.getItem(backupKey);
+      const backup = raw ? JSON.parse(raw) : null;
+      const fields = backup?.fields;
+      if (fields && typeof fields.title === "string" && typeof fields.content === "string" &&
+        (!current || backup.time > Date.parse(current.updated_at)) && JSON.stringify(fields) !== JSON.stringify(baseline))
+        return {baseline,fields:fields as DraftFields,restored:true};
+    } catch {}
+    return {baseline,fields:baseline,restored:false};
+  });
+  const [fields, setFields] = useState<DraftFields>(start.fields);
   const [currentId, setCurrentId] = useState<string | null>(editId);
   const [mode, setMode] = useState<"edit" | "split" | "preview">("edit");
   const [full, setFull] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState("尚未保存");
-  const [restored, setRestored] = useState(false);
+  const [saved, setSaved] = useState(start.restored ? "已恢复浏览器备份" : current ? "已保存到数据库" : "尚未保存");
+  const [restored, setRestored] = useState(start.restored);
   const editorView = useRef<EditorView | null>(null);
-  const initialized = useRef("");
-  const lastSaved = useRef("");
-  const current = data.articles.find((a) => a.id === editId);
-  const backupKey = `df-draft-${data.user?.id}-${editId || "new"}`;
-  useEffect(() => {
-    if (loading || !data.user || initialized.current === backupKey) return;
-    initialized.current = backupKey;
-    let initial: DraftFields = current
-      ? {
-          title: current.title,
-          content: current.content,
-          category: current.category,
-          tags: current.tags.join(", "),
-          excerpt: current.excerpt,
-          cover: current.cover,
-        }
-      : blank;
-    lastSaved.current = JSON.stringify(initial);
-    setRestored(false);
-    const backup = localStorage.getItem(backupKey);
-    if (backup) {
-      try {
-        const value = JSON.parse(backup);
-        if (
-          (!current || value.time > new Date(current.updated_at).getTime()) &&
-          JSON.stringify(value.fields) !== lastSaved.current
-        ) {
-          initial = value.fields;
-          setRestored(true);
-          setSaved("已恢复浏览器备份");
-        } else {
-          localStorage.removeItem(backupKey);
-          setSaved(current ? "已保存到数据库" : "尚未保存");
-        }
-      } catch {
-        localStorage.removeItem(backupKey);
-      }
-    } else setSaved(current ? "已保存到数据库" : "尚未保存");
-    setFields(initial);
-    setCurrentId(editId);
-  }, [loading, data.user, backupKey, current, editId]);
+  const lastSaved = useRef(JSON.stringify(start.baseline));
   useEffect(() => {
     if (
       !data.user ||
-      initialized.current !== backupKey ||
       (!fields.title && !fields.content) ||
       JSON.stringify(fields) === lastSaved.current
     )
@@ -168,7 +138,7 @@ export function Editor() {
     }
   };
   const saveRef = useRef(save);
-  saveRef.current = save;
+  useEffect(() => { saveRef.current = save; });
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
@@ -344,7 +314,7 @@ export function Editor() {
             aria-label="插入图片"
             onClick={() => insert("![", "](https://example.com/image.png)")}
           >
-            <Image size={17} />
+            <ImageIcon size={17} />
           </button>
         </div>
         <div className="editor-view-tools">

@@ -3,6 +3,14 @@ import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { authors, seedArticles } from "./seed";
+import { backendConfig } from "./backend";
+import type { ArticleSummary } from "./types";
+export const articleColumns = "id,author_id,title,excerpt,category,tags,cover,status,views,seed_likes,created_at,updated_at";
+const fields: Record<Table, string> = {
+  articles: articleColumns + ",content", profiles: "id,name,bio,color,role,created_at",
+  comments: "id,article_id,user_id,content,created_at", likes: "id,article_id,user_id,created_at",
+  bookmarks: "id,article_id,user_id,created_at", follows: "id,author_id,user_id,created_at",
+};
 
 export type Table =
   "profiles" | "articles" | "comments" | "likes" | "bookmarks" | "follows";
@@ -15,14 +23,12 @@ const tables: Table[] = [
   "bookmarks",
   "follows",
 ];
-export const isCloud = Boolean(
-  process.env.NEXT_PUBLIC_SUPABASE_URL &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-);
+export const isCloud = backendConfig().backend === "supabase";
 export function cloudClient(token?: string): SupabaseClient {
+  const { url, key } = backendConfig();
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url!,
+    key!,
     {
       auth: { persistSession: false, autoRefreshToken: false },
       global: token
@@ -33,20 +39,19 @@ export function cloudClient(token?: string): SupabaseClient {
 }
 let database: DatabaseSync | undefined;
 export async function localDatabase() {
-  if (process.env.VERCEL)
-    throw new Error(
-      "上线需要配置 Supabase 数据库。请设置环境变量并运行初始化 SQL。",
-    );
+  if (backendConfig().backend !== "local") throw new Error("SQLite is available only with DATA_BACKEND=local.");
   if (database) return database;
   const { DatabaseSync: SQLite } = await import("node:sqlite");
   if (database) return database;
-  const directory = join(process.cwd(), "data");
+  const directory = process.env.LOCAL_DATA_DIR || join(process.cwd(), "data");
   mkdirSync(directory, { recursive: true });
   database = new SQLite(join(directory, "devflow.sqlite"));
   database.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
     PRAGMA busy_timeout = 5000;
+    CREATE TABLE IF NOT EXISTS auth_attempts (bucket TEXT PRIMARY KEY, count INTEGER NOT NULL, expires_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS article_views_daily (article_id TEXT NOT NULL, user_id TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY(article_id,user_id,day));
     CREATE TABLE IF NOT EXISTS profiles (id TEXT PRIMARY KEY, name TEXT NOT NULL, bio TEXT NOT NULL, color TEXT NOT NULL, role TEXT NOT NULL, created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS credentials (user_id TEXT PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE, email TEXT NOT NULL UNIQUE COLLATE NOCASE, password_hash TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE, expires_at TEXT NOT NULL);
@@ -99,10 +104,11 @@ export class Store {
   constructor(token?: string) {
     if (isCloud) this.client = cloudClient(token);
   }
-  async list<T>(table: Table, filters: RecordData = {}): Promise<T[]> {
+  async list<T>(table: Table, filters: RecordData = {}, limit = 500): Promise<T[]> {
     if (!tables.includes(table)) throw new Error("Invalid table");
+    if (process.env.DATA_TRACE === "1") console.info(`[DevFlow query] ${table}`);
     if (this.client) {
-      let query = this.client.from(table).select("*");
+      let query = this.client.from(table).select(fields[table]).limit(limit);
       for (const [key, value] of Object.entries(filters))
         query = query.eq(key, value);
       const { data, error } = await query;
@@ -111,9 +117,23 @@ export class Store {
     }
     const db = await localDatabase();
     return db
-      .prepare(`SELECT * FROM ${table}${where(filters)}`)
-      .all(...Object.values(filters).map(encode))
+      .prepare(`SELECT ${fields[table]} FROM ${table}${where(filters)} LIMIT ?`)
+      .all(...Object.values(filters).map(encode), limit)
       .map(decode) as T[];
+  }
+  async summaries(userId?: string, limit = 200, offset = 0): Promise<ArticleSummary[]> {
+    if (process.env.DATA_TRACE === "1") console.info("[DevFlow query] article_summaries");
+    if (this.client) {
+      let query = this.client.from("article_summaries").select(articleColumns + ",reading_minutes")
+        .order("created_at", {ascending:false}).order("id", {ascending:false}).range(offset, offset + limit - 1);
+      query = userId ? query.or(`status.eq.published,author_id.eq.${userId}`) : query.eq("status", "published");
+      const {data,error} = await query.returns<ArticleSummary[]>();
+      if (error) throw new Error(`Apply supabase/004_production_hardening.sql: ${error.code}`);
+      return (data ?? []) as ArticleSummary[];
+    }
+    return (await localDatabase()).prepare(`SELECT ${articleColumns}, max(2, CAST((length(content) + 449) / 450 AS INTEGER)) AS reading_minutes
+      FROM articles WHERE status = 'published' ${userId ? "OR author_id = ?" : ""}
+      ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`).all(...(userId ? [userId] : []), limit, offset).map(decode) as ArticleSummary[];
   }
   async insert<T>(table: Table, data: RecordData): Promise<T> {
     if (this.client) {
@@ -160,18 +180,21 @@ export class Store {
       .prepare(`DELETE FROM ${table}${where(filters)}`)
       .run(...Object.values(filters).map(encode));
   }
-  async view(id: string) {
+  async view(id: string, userId: string) {
     if (this.client) {
       const { error } = await this.client.rpc("increment_article_views", {
         article_id: id,
       });
       if (error) throw new Error(error.message);
     } else {
-      (await localDatabase())
-        .prepare(
-          "UPDATE articles SET views = views + 1 WHERE id = ? AND status = 'published'",
-        )
-        .run(id);
+      const db = await localDatabase();
+      const day = new Date().toISOString().slice(0,10);
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        const inserted = db.prepare("INSERT OR IGNORE INTO article_views_daily(article_id,user_id,day) VALUES (?,?,?)").run(id,userId,day);
+        if (inserted.changes) db.prepare("UPDATE articles SET views = views + 1 WHERE id = ? AND status = 'published'").run(id);
+        db.exec("COMMIT");
+      } catch (error) { db.exec("ROLLBACK"); throw error; }
     }
   }
 }

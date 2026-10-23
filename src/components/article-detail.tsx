@@ -3,14 +3,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
-  ArrowRight,
   ArrowUpRight,
   Bookmark,
   Check,
   ChevronRight,
   Clock3,
   Eye,
-  Heart,
   Link2,
   List,
   MessageCircle,
@@ -31,12 +29,12 @@ import {
   readTime,
   Spinner,
 } from "./ui";
-import { MarkdownContent } from "./markdown";
+import { MarkdownContent } from "./markdown-lazy";
 import { ArticleCard } from "./feed";
 import { categories } from "@/lib/types";
 
 export function ArticleDetail({ id }: { id: string }) {
-  const { data, act, refresh, loading } = useCommunity();
+  const { data, act, loading } = useCommunity();
   const [progress, setProgress] = useState(0);
   const [activeHeading, setActiveHeading] = useState("");
   const [headings, setHeadings] = useState<
@@ -46,20 +44,20 @@ export function ArticleDetail({ id }: { id: string }) {
   const [sending, setSending] = useState(false);
   const [busy, setBusy] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
-  const article = data.articles.find((a) => a.id === id);
+  const article = data.article?.id === id ? data.article : null;
   useEffect(() => {
     window.scrollTo(0, 0);
-    const key = `df-view-${id}`;
+    if (!data.user) return;
+    const key = `df-view-${data.user.id}-${id}-${new Date().toISOString().slice(0,10)}`;
     if (!sessionStorage.getItem(key))
       request("view", { id })
         .then(() => {
           sessionStorage.setItem(key, "1");
-          refresh();
         })
         .catch(() => {});
-  }, [id, refresh]);
+  }, [id, data.user]);
   useEffect(() => {
-    setHeadings(
+    const updateHeadings = () => setHeadings(
       Array.from(
         document.querySelectorAll(".article-body h2, .article-body h3"),
       ).map((node) => ({
@@ -82,9 +80,12 @@ export function ArticleDetail({ id }: { id: string }) {
         .at(-1);
       if (current) setActiveHeading(current.id);
     };
-    onScroll();
+    const container = document.querySelector(".article-body");
+    const observer = new MutationObserver(updateHeadings);
+    if (container) observer.observe(container, {childList:true,subtree:true});
+    const initialFrame = requestAnimationFrame(() => { updateHeadings(); onScroll(); });
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => { cancelAnimationFrame(initialFrame); observer.disconnect(); window.removeEventListener("scroll", onScroll); };
   }, [article?.content, id]);
   if (!article)
     return (

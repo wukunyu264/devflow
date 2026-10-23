@@ -1,102 +1,92 @@
-# 从本地 DevFlow 到可访问的 Vercel 链接
+# DevFlow：Netlify + Supabase 部署
 
-本地可先独立验收：`npm run dev` → http://localhost:3000 。以下步骤只在准备上线时执行。
+正式地址：**https://boisterous-cascaron-44d48a.netlify.app**
+仓库：**https://github.com/wukunyu264/devflow**，生产分支 `main`。
 
-## 1. 创建两个账号
+本项目实际使用 Netlify。`vercel.json` 是历史备用配置，不参与当前构建。构建始终保持 `npm run build`（`next build --webpack`），安装 `npm ci`，Node 24。
 
-分别打开：
+## 需要人类做的事
 
-- [Supabase 注册/登录](https://supabase.com/dashboard)：创建云数据库与用户认证服务。
-- [Vercel 注册/登录](https://vercel.com/signup)：部署网站，获取公开链接。
+Codex 不会登录 Supabase、Netlify 或 Vercel，也不会代填账号凭据。
 
-可使用已有 GitHub 账号登录。账号注册、密码输入、条款确认和授权由你本人操作。可选择适合个人项目的方案，遇到付费选项先确认需求再继续。
+### 1. 先升级数据库
 
-## 2. 创建 Supabase 项目
+已有数据库 **不要重跑 `001_schema.sql`**：
 
-1. 登录 Supabase Dashboard，创建一个 Organization（如果还没有）。
-2. 点击 **New project**，项目名可以填写 `devflow`。
-3. 自己设置并保存数据库密码，选择合适的区域，创建项目并等待 Ready。
-4. 打开 **SQL Editor**，新建查询，把 `supabase/001_schema.sql` 的全部内容粘贴进去，点击 Run。
-5. 再建一个查询，运行 `supabase/002_seed.sql`。
-6. 在 Table Editor 检查 `profiles` 有 6 条示例作者、`articles` 有 18 条示例文章。
+1. 在 Supabase SQL Editor 新建查询。
+2. 粘贴并完整运行 `supabase/004_production_hardening.sql`。
+3. 根据 `supabase/VERIFY_PRODUCTION.sql` 检查视图、权限和限流。事务中的检查失败会报错；该验证不写真实用户或文章。
+4. 可选：运行 `003_extra_content.sql` 导入另外 5 位展示作者和 20 篇文章，与本次上线修复无依赖。
 
-`001_schema.sql` 用于新项目，只运行一次；重复运行会因对象已存在而报错。`002_seed.sql` 可重复运行，已有内容不会被覆盖。
+新项目按顺序执行 `001_schema.sql`、`002_seed.sql`、`004_production_hardening.sql`。`001` 只用于新库；`002/003/004` 可重复运行。不要关闭 RLS。
 
-## 3. 配置数据库连接
+`004` 变更：
 
-从项目的 Connect 面板或项目设置复制：
+- `article_summaries` 使用 `security_invoker=true`，遵循文章 RLS，在库内计算阅读时长，不传输正文。
+- 私有 schema 的计数表实现每邮箱摘要 15 分钟 12 次认证尝试，跨函数实例共享；计数过期后自动清理。
+- `devflow_session_active()` 检查 JWT 的 `session_id` 与 `auth.sessions`，身份仅取签名 JWT，不接受外部用户 ID。
+- 现有所有权策略继续保留，再用 restrictive policy 要求登录会话仍存在。
+- 撤销 anon 对阅读 RPC 的权限；登录用户每天最多为同一篇文章计一次阅读。
+- 保留类别外键与规范化标签关系，删除实际未用到的 `articles_search` GIN 索引。
 
-- **Project URL**：`https://你的项目标识.supabase.co`
-- **Publishable key** 或 legacy **anon public key**
+### 2. Netlify 环境变量
 
-密钥的最新入口见 [Supabase API Keys](https://supabase.com/docs/guides/getting-started/api-keys)。本项目的 `NEXT_PUBLIC_SUPABASE_ANON_KEY` 同时接受 publishable key 和 legacy anon key。**不要使用 secret key / service_role key。**
-
-在项目根目录把 `.env.example` 复制为 `.env.local`，填写：
+项目后台 **Project configuration → Environment variables**，确保变量同时用于 **Builds 与 Functions**（Free 使用 All scopes）及 Production：
 
 ```dotenv
-NEXT_PUBLIC_SUPABASE_URL=https://你的项目标识.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=你的publishable或anon公钥
+DATA_BACKEND=supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SITE_URL=https://boisterous-cascaron-44d48a.netlify.app
 ```
 
-保存后停止开发服务，再运行 `npm run dev`。左侧页脚会从 LOCAL COMMUNITY 变为 BUILT FOR DEVELOPERS。重新注册云端账号，测试发布文章、点赞和评论；在 Supabase Table Editor 中确认实际有新增行。
+URL、公钥直接在后台填写本项目值，不提交 `.env.local`。公钥可为 publishable 或 legacy anon；不能用 secret/service_role key。`SITE_URL` 是博客网址，不是数据库 URL。
 
-Supabase 默认认证配置可能要求验证邮箱。若注册后提示验证，请到邮箱完成验证，再使用邮箱密码登录。本项目不会将待验证注册误报为已登录。不要为了绕过配置问题而关闭数据库 RLS。
+生产缺配置会在 server 初始化时报出缺失变量名；不允许临时退回 SQLite。其他 serverless 平台同样拒绝 local。
 
-## 4. 使用 Vercel CLI 部署
+### 3. 发布这个版本
 
-在项目目录打开终端：
+先本地执行：
 
 ```powershell
-cd D:\wky\boc
-npx vercel login
+npm ci
+npm run typecheck
+npm run build
+npm run lint
+npm run test:local
 ```
 
-按终端提示，用浏览器完成你自己的 Vercel 登录。随后：
+维护者审核变更后提交、推送 `main`（不要提交忽略文件），由 Git 集成触发 Netlify 构建；也可在 Deploys 页顶部选择 Trigger deploy，或进入上次部署选择 Retry with latest branch commit。环境变量变化后必须重新部署，单纯刷新网页无效。
+
+确认部署显示 Published 且 commit 与本次提交一致。若启用了访问保护，按项目分享需求确认 Production 为公开访问；无痕窗口不应要求 Netlify 登录。
+
+Supabase Authentication → URL Configuration：Site URL 设置为正式博客地址，必要时允许 `http://localhost:3000`。保留邮箱验证时，面试测试账号应提前验证邮箱。
+
+### 4. 部署后验收
 
 ```powershell
-npx vercel link
+npm test
+curl.exe -I https://boisterous-cascaron-44d48a.netlify.app/unknown-page
+curl.exe -I https://boisterous-cascaron-44d48a.netlify.app/sitemap.xml
+curl.exe -I https://boisterous-cascaron-44d48a.netlify.app/robots.txt
 ```
 
-选择自己的账户，创建名为 `devflow`（如重名可换名）的项目，目录选当前目录，框架选择 Next.js，保留项目提供的构建命令。
+`npm test` 在 Supabase 配置下只读线上：列表不含正文、当前正文读取、SSR 不含其他文章正文、精确 404、metadata/canonical/JSON-LD 与 SEO 文件。写入生命周期在 SQLite 自动验证；云端需按 README 的 5 分钟流程用两个真实账号手动验收。
 
-在 [Vercel Dashboard](https://vercel.com/dashboard) 打开刚创建的项目 → **Settings → Environment Variables**，添加上面两个环境变量。选择 Production 和 Preview。请直接在 Vercel 页面填写，不要把密钥写进 Git 或公开聊天。
+额外检查：
 
-在项目 Settings → Build and Deployment 确认 Node.js 使用 **24.x**。项目已提供 `vercel.json`，构建为 `npm run build`，安装为 `npm ci`。
+- 保存退出前的 Cookie（仅在自己的调试工具中），退出后重放旧 Cookie 不能获得登录身份或修改文章；不要把令牌发到聊天或截图。
+- 相同账号打开同一文章两次，阅读量最多增加 1；匿名访问不增加。
+- 对同一测试邮箱连续失败登录，13 次起返回 429；换函数实例/重新部署不能重置数据库窗口。
+- 第二个账号调用编辑/删除接口应得到 403；直接 Supabase REST 同样受所有权与会话策略限制。
+- 深色偏好下刷新，`<head>` 的阻塞脚本在页面绘制前设置主题；可在禁用 JavaScript 后检查默认可读性，但禁用 JS 不属于完整交互验收。
 
-回到终端执行：
+## 故障定位
 
-```powershell
-npx vercel --prod
-```
+- 构建/启动缺配置：根据错误补齐变量并重新部署；确认 Functions 也能读取配置。
+- 提示 Apply 004：数据库迁移未执行或执行不完整；不要反复重跑旧建表文件。
+- 匿名数据为空：检查已发布状态、view 的 security_invoker 与 grants、原有 RLS。
+- 登录/注册失败：检查验证邮件、认证限流与数据库 RPC；不要用 service_role 绕过策略。
+- 退出失败：服务端保留错误，不伪装成功；网络恢复后重试。JWT 自然过期与即时会话撤销是两个不同机制。
 
-部署成功后，终端将返回实际 Production URL，例如 `https://你的项目名.vercel.app`。以返回的真实地址为准。
-
-也可以把代码推送到自己的 GitHub 仓库后，在 Vercel Import Project 导入；同样需要在首次部署前填写环境变量。
-
-## 5. 设置认证回跳与上线验收
-
-在 Supabase → **Authentication → URL Configuration** 中：
-
-- 将 Site URL 设置为 Vercel 返回的正式地址。
-- 需要本地开发时，在允许的 Redirect URLs 中加入 `http://localhost:3000`。
-
-然后用正式网站测试：
-
-1. 首页与示例文章能匿名阅读。
-2. 使用真实邮箱注册，按提示完成邮箱验证，然后登录。
-3. 发布新文章，刷新后仍能查到；在数据库里能看到记录。
-4. 点赞、收藏、评论后刷新，状态保持；能取消点赞/收藏。
-5. 第二个账号不能修改或删除第一个账号的文章、评论。
-6. 退出登录后，访问写文章页会要求登录。
-7. 手机宽度可阅读，深色模式可切换。
-8. 无痕窗口打开正式地址仍能访问首页（若 Vercel 启用了部署访问保护，请在 Dashboard 按实际分享需求设置）。
-
-### 常见问题
-
-- **上线后提示数据库不可用**：检查两个环境变量是否作用于 Production，SQL 是否成功执行；修正环境变量后重新部署。
-- **页面没有示例文章**：检查是否运行了 `002_seed.sql`，以及读取策略和 grants 是否存在。
-- **注册成功但登录不了**：检查邮箱验证状态、Supabase Authentication 日志以及邮件限流。
-- **不能写入数据**：检查当前用户是否登录、RLS 策略和 `on_auth_user_created` 触发器是否存在；不要换用 service_role key 绕过权限。
-- **本地数据在云端看不到**：本地 SQLite 与 Supabase 是两套独立的数据源，初始示例之外的数据不会自动同步。
-
-官方资料：[Vercel CLI 部署](https://vercel.com/docs/projects/deploy-from-cli)、[Vercel 环境变量](https://vercel.com/docs/environment-variables)、[Supabase Next.js](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs)。
+参考：[Netlify Next.js](https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/)、[环境变量](https://docs.netlify.com/build/environment-variables/overview/)、[Supabase sessions](https://supabase.com/docs/guides/auth/sessions)、[视图权限](https://supabase.com/docs/guides/database/views)。

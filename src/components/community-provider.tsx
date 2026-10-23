@@ -3,11 +3,11 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast, Toaster } from "sonner";
 import type { Community } from "@/lib/types";
 
@@ -45,6 +45,12 @@ type Context = {
   toggleTheme: () => void;
 };
 const CommunityContext = createContext<Context | null>(null);
+function subscribeTheme(callback: () => void) {
+  window.addEventListener("devflow-theme", callback);
+  window.addEventListener("storage", callback);
+  return () => { window.removeEventListener("devflow-theme", callback); window.removeEventListener("storage", callback); };
+}
+const themeSnapshot = () => document.documentElement.dataset.theme === "dark";
 export function CommunityProvider({
   initial,
   children,
@@ -53,26 +59,18 @@ export function CommunityProvider({
   children: ReactNode;
 }) {
   const [data, setData] = useState(initial);
-  const [loading, setLoading] = useState(true);
-  const [dark, setDark] = useState(false);
+  const loading = false;
+  const dark = useSyncExternalStore(subscribeTheme, themeSnapshot, () => false);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const selectedId = pathname.startsWith("/article/") ? pathname.split("/")[2] : pathname === "/write" ? searchParams.get("edit") : null;
   const refresh = useCallback(async () => {
-    const response = await fetch("/api/community", { cache: "no-store" });
+    const response = await fetch("/api/community" + (selectedId ? `?article=${encodeURIComponent(selectedId)}` : ""), { cache: "no-store" });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "加载失败");
     setData(result);
-  }, []);
-  useEffect(() => {
-    refresh()
-      .catch((e) => toast.error(e.message))
-      .finally(() => setLoading(false));
-    const preference = localStorage.getItem("devflow-theme");
-    const isDark = preference
-      ? preference === "dark"
-      : window.matchMedia("(prefers-color-scheme: dark)").matches;
-    setDark(isDark);
-    document.documentElement.dataset.theme = isDark ? "dark" : "light";
-  }, [refresh]);
+  }, [selectedId]);
   const act = useCallback(
     async (
       action: string,
@@ -99,9 +97,10 @@ export function CommunityProvider({
   );
   const toggleTheme = () => {
     const next = !dark;
-    setDark(next);
-    localStorage.setItem("devflow-theme", next ? "dark" : "light");
+    try { localStorage.setItem("devflow-theme", next ? "dark" : "light"); } catch {}
     document.documentElement.dataset.theme = next ? "dark" : "light";
+    document.documentElement.style.colorScheme = next ? "dark" : "light";
+    window.dispatchEvent(new Event("devflow-theme"));
   };
   return (
     <CommunityContext.Provider

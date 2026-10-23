@@ -3,6 +3,8 @@ const config: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   serverExternalPackages: ["node:sqlite"],
   poweredByHeader: false,
+  // Blocking metadata also preserves real 404 status before any stream is sent.
+  htmlLimitedBots: /.*/,
   async headers() {
     return [
       {
