@@ -1,8 +1,9 @@
 import { cache } from "react";
 import { context } from "./auth";
 import { getCommunity } from "./community";
-// Request-scoped only: never share private data between requests.
+import { getPublicCommunity } from "./public-data";
+// Identity is request-scoped. Only the anonymous branch shares public data.
 export const getPageData = cache(async (articleId?: string) => {
   const { store, user } = await context(false);
-  return getCommunity(store, user, articleId);
+  return user ? getCommunity(store, user, articleId) : getPublicCommunity(articleId);
 });

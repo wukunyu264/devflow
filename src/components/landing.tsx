@@ -113,7 +113,7 @@ export function Landing() {
           创作中心 <Arrow diagonal />
         </PortalLink>
       </header>
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <section
           className={styles.hero}
           aria-labelledby="landing-title"

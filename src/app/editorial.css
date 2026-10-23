@@ -1108,3 +1108,15 @@ select:focus {
     transition: none !important;
   }
 }
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: 8px;
+  left: 8px;
+  padding: 12px 18px;
+  background: var(--surface, #fff);
+  color: var(--text, #12161e);
+  border: 2px solid var(--primary, #0069ff);
+  transform: translateY(-160%);
+}
+.skip-link:focus { transform: translateY(0); }

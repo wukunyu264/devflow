@@ -31,7 +31,7 @@ export function Account({ register = false }: { register?: boolean }) {
   const next = /^\/(?![\/\\])/.test(rawNext) ? rawNext : "/";
   const otherHref = `${register ? "/login" : "/register"}?next=${encodeURIComponent(next)}`;
   return (
-    <main className="auth-page">
+    <main id="main-content" tabIndex={-1} className="auth-page">
       <section className="auth-art">
         <Logo />
         <div className="auth-art-content">
@@ -84,8 +84,8 @@ export function Account({ register = false }: { register?: boolean }) {
               </span>
               <h1>查看一下你的邮箱</h1>
               <p>
-                验证邮件已发送至 <strong>{email}</strong>。<br />
-                点击邮件中的链接后，即可回来登录。
+                注册申请已提交。如需验证，请查看 <strong>{email}</strong> 的收件箱和垃圾邮件。<br />
+                完成验证后回来登录；如果已有账号，可直接登录。
               </p>
               <Link href={otherHref} className="button primary">
                 前往登录 <ArrowRight size={15} />
@@ -204,7 +204,7 @@ export function Account({ register = false }: { register?: boolean }) {
                     {error}
                   </div>
                 )}
-                <button className="button primary auth-submit" disabled={busy}>
+                <button className="button primary auth-submit" disabled={busy} aria-label={register ? "创建我的账号" : "登录 DevFlow"} aria-busy={busy}>
                   {busy ? (
                     <Spinner />
                   ) : register ? (

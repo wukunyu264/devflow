@@ -122,7 +122,7 @@ export function ArticleDetail({ id }: { id: string }) {
   }, [article?.content, id]);
   if (!article)
     return (
-      <main className="standalone-page">
+      <main id="main-content" tabIndex={-1} className="standalone-page">
         <Empty
           title={loading ? "正在寻找这篇文章…" : "这篇文章暂时不在这里"}
           text={
@@ -168,7 +168,7 @@ export function ArticleDetail({ id }: { id: string }) {
   return (
     <>
       <div className="reading-progress" style={{ width: `${progress}%` }} />
-      <main className="reading-layout">
+      <main id="main-content" tabIndex={-1} className="reading-layout">
         <div className="reading-actions">
           <Link className="icon-circle" href="/" title="返回首页">
             <ArrowLeft size={19} />

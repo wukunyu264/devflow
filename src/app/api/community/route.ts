@@ -14,20 +14,23 @@ import { cloudClient, isCloud, localDatabase, Store } from "@/lib/store";
 import { getCommunity } from "@/lib/community";
 import type { Article, Comment, Profile, Reaction, Follow } from "@/lib/types";
 import { takeAuthAttempt } from "@/lib/rate-limit";
+import { authFailure } from "@/lib/auth-errors";
+import { getPublicCommunity, invalidatePublicCommunity } from "@/lib/public-data";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const dynamic = "auto";
 class HttpError extends Error {
   constructor(
     message: string,
     public status = 400,
+    public code?: string,
   ) {
     super(message);
   }
 }
-const uuid = z.string().uuid();
+const uuid = z.string("请输入有效的资源标识").uuid("资源标识格式无效");
 const credentials = z.object({
-  email: z.email("请输入有效的邮箱地址").max(254),
+  email: z.string("请输入邮箱地址").trim().toLowerCase().pipe(z.email("请输入有效的邮箱地址").max(254, "邮箱地址过长")),
   password: z.string().min(8, "密码至少需要 8 个字符").max(128),
   name: z.string().trim().min(2, "昵称至少 2 个字").max(24).optional(),
 });
@@ -82,13 +85,13 @@ const articleSchema = z
 function failure(error: unknown) {
   if (error instanceof ZodError)
     return NextResponse.json(
-      { error: error.issues[0].message },
+      { error: /[\u3400-\u9fff]/.test(error.issues[0].message) ? error.issues[0].message : "提交的内容格式无效，请检查后重试。" },
       { status: 400 },
     );
   if (error instanceof HttpError)
     return NextResponse.json(
-      { error: error.message },
-      { status: error.status },
+      { error: error.message, ...(error.code ? { code: error.code } : {}) },
+      { status: error.status, headers: { "Cache-Control": "private, no-store" } },
     );
   console.error(
     "[DevFlow API]",
@@ -103,7 +106,8 @@ export async function GET(request: NextRequest) {
   try {
     const { store, user } = await context();
     const articleId = request.nextUrl.searchParams.get("article");
-    return NextResponse.json(await getCommunity(store, user, articleId ? uuid.parse(articleId) : undefined), {
+    const id = articleId ? uuid.parse(articleId) : undefined;
+    return NextResponse.json(user ? await getCommunity(store, user, id) : await getPublicCommunity(id), {
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch (error) {
@@ -113,8 +117,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const origin = request.headers.get("origin");
-    if (origin && new URL(origin).host !== request.headers.get("host"))
-      throw new HttpError("请求来源无效", 403);
+    if (origin) {
+      let source: URL;
+      try { source = new URL(origin); } catch { throw new HttpError("请求来源无效", 403); }
+      if (!["http:", "https:"].includes(source.protocol) || source.host !== request.headers.get("host"))
+        throw new HttpError("请求来源无效", 403);
+    }
     const raw = await request.text();
     if (raw.length > 150000) throw new HttpError("请求内容过大", 413);
     let body: Record<string, unknown>;
@@ -123,7 +131,7 @@ export async function POST(request: NextRequest) {
     } catch {
       throw new HttpError("请求格式无效");
     }
-    const action = z.string().parse(body.action);
+    const action = z.string("请指定操作类型").min(1, "请指定操作类型").parse(body?.action);
     if (action === "login" || action === "register") {
       const input = credentials.parse(body);
       if (!(await takeAuthAttempt(input.email))) throw new HttpError("尝试次数过多，请 15 分钟后再试。", 429);
@@ -140,19 +148,20 @@ export async function POST(request: NextRequest) {
                 email: input.email,
                 password: input.password,
               });
-        if (result.error)
-          throw new HttpError(
-            action === "login"
-              ? "邮箱或密码错误，或邮箱尚未验证。"
-              : "注册请求暂时无法完成，请稍后重试或尝试登录。",
-          );
-        if (!result.data.session)
+        if (result.error) {
+          const problem = authFailure(action, result.error);
+          // Only our allowlisted code/status enter logs, never email/password/JWT/provider text.
+          console.warn("[DevFlow auth]", action, problem.code, problem.status);
+          throw new HttpError(problem.message, problem.status, problem.code);
+        }
+        if (!result.data.session) {
+          if (action === "register") invalidatePublicCommunity();
           return NextResponse.json({
-            message: "注册申请已提交，请查看邮箱中的验证邮件，验证后即可登录。",
+            message: "注册申请已提交。如需验证，请查看邮箱（含垃圾邮件）；已有账号可直接登录。",
             confirmation: true,
           });
+        }
         const session = result.data.session;
-        await setSession(session.access_token, session.refresh_token);
         const store = new Store(session.access_token);
         const profiles = await store.list<Profile>("profiles", {
           id: result.data.user!.id,
@@ -162,6 +171,7 @@ export async function POST(request: NextRequest) {
             "profiles",
             makeProfile(result.data.user!.id, input.name ?? "新朋友"),
           );
+        await setSession(session.access_token, session.refresh_token);
       } else {
         const db = await localDatabase();
         if (action === "register") {
@@ -205,6 +215,7 @@ export async function POST(request: NextRequest) {
           await newLocalSession(row.user_id as string);
         }
       }
+      if (action === "register") invalidatePublicCommunity();
       return NextResponse.json({ success: true });
     }
     if (action === "logout") {
@@ -215,7 +226,10 @@ export async function POST(request: NextRequest) {
     if (action === "view") {
       const id = uuid.parse(body.id);
       if (user) await store.view(id, user.id);
-      return NextResponse.json({ success: true });
+      if (user) invalidatePublicCommunity();
+      return NextResponse.json(user
+        ? { success: true, counting: "signed_in_daily_deduplicated" }
+        : { success: true, counted: false, reason: "anonymous" });
     }
     if (!user) throw new HttpError("登录后即可参与社区。", 401);
     const now = new Date().toISOString();
@@ -245,6 +259,7 @@ export async function POST(request: NextRequest) {
           views: 0,
           seed_likes: 0,
         });
+      invalidatePublicCommunity();
       return NextResponse.json({ success: true, id });
     }
     if (action === "deleteArticle") {
@@ -318,6 +333,7 @@ export async function POST(request: NextRequest) {
         .parse(body.profile);
       await store.update("profiles", data, { id: user.id });
     } else throw new HttpError("未知操作");
+    invalidatePublicCommunity();
     return NextResponse.json({ success: true });
   } catch (error) {
     return failure(error);

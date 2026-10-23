@@ -6,15 +6,12 @@ import { Landing } from "@/components/landing";
 import { getPageData } from "@/lib/page-data";
 import { categories } from "@/lib/types";
 import { absoluteUrl } from "@/lib/site";
+import { validId, validPagePath } from "@/lib/routes";
 
-export const dynamic = "force-dynamic";
+// cookies/searchParams still render per request; do not force-no-store the public data cache.
+export const dynamic = "auto";
 export const runtime = "nodejs";
 type Props = { params: Promise<{ path?: string[] }> };
-const validId = (id?: string) =>
-  Boolean(
-    id &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
-  );
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { path = [] } = await params;
   const names: Record<string, string> = {
@@ -96,29 +93,7 @@ export default async function Page({
   searchParams,
 }: Props & { searchParams: Promise<{ edit?: string; feed?: string }> }) {
   const { path = [] } = await params;
-  const simple = [
-    "community",
-    "discover",
-    "trending",
-    "search",
-    "bookmarks",
-    "write",
-    "login",
-    "register",
-    "dashboard",
-    "about",
-    "guidelines",
-  ];
-  const valid =
-    path.length === 0 ||
-    (path.length === 1 && simple.includes(path[0])) ||
-    (path.length === 2 && ["article", "user", "category"].includes(path[0]));
-  if (
-    !valid ||
-    (["article", "user"].includes(path[0]) && !validId(path[1])) ||
-    (path[0] === "category" && !categories.some((c) => c.slug === path[1]))
-  )
-    notFound();
+  if (!validPagePath(path)) notFound();
   const query = await searchParams;
   // The portal is independent of community data/auth. Keep old following links working.
   if (path.length === 0 && query.feed !== "following") return <Landing />;

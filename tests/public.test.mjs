@@ -6,6 +6,9 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:3000';
 test('anonymous list and detail projections, SEO and exact 404 status', async () => {
   const response = await fetch(base + '/api/community');
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'),'private, no-store','Identity-bearing responses must not enter a shared HTTP cache');
+  assert.match(response.headers.get('content-security-policy') || '',/frame-ancestors 'none'/);
+  assert.match(response.headers.get('permissions-policy') || '',/camera=\(\)/);
   const data = await response.json();
   assert.equal(data.user, null);
   assert.ok(data.articles.length > 0);
@@ -51,6 +54,13 @@ test('anonymous list and detail projections, SEO and exact 404 status', async ()
     assert.equal((await fetch(base + path)).status, 404, path);
     assert.equal((await fetch(base + path, {method:'HEAD'})).status, 404, 'HEAD ' + path);
   }
+  const missingHtml=await fetch(base+'/unknown-page').then(r=>r.text());
+  const missingBody=/<body[^>]*>([\s\S]*?)<\/body>/.exec(missingHtml)?.[1]
+    .replace(/<script\b[\s\S]*?<\/script>/g,'');
+  assert.match(missingBody || '',/灵感还在，页面走丢了/,'404 must contain server-rendered text without executing JS');
+  const index=await fetch(base+'/index',{redirect:'manual'});
+  assert.equal(index.status,301);
+  assert.equal(new URL(index.headers.get('location'),base).pathname,'/');
   const sitemapResponse = await fetch(base + '/sitemap.xml');
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();

@@ -387,7 +387,7 @@ export function Feed({
             : currentCategory?.label || "为你推荐";
   const showHero = (kind === "home" && !following) || category === "ai";
   return (
-    <main className="community-page">
+    <main id="main-content" tabIndex={-1} className="community-page">
       {showHero && <Hero ai={category === "ai"} />}
       <div className="community-layout editorial-feed">
         <Sidebar />

@@ -70,6 +70,8 @@ test("local community lifecycle, persistence and authorization", async (t) => {
         ).response.status,
         403,
       );
+      for (const origin of ['null','invalid-origin','file://localhost'])
+        assert.equal((await call('login',{email,password:'testing-password'},'',origin)).response.status,403);
     },
   );
   await t.test(
@@ -127,7 +129,9 @@ test("local community lifecycle, persistence and authorization", async (t) => {
   });
   await t.test("anonymous views do not count and signed-in daily views deduplicate", async () => {
     const before = (await state("")).articles.find(a => a.id === sample.id).views;
-    assert.equal((await call("view",{id:sample.id},"")).response.status,200);
+    const anonymous = await call("view",{id:sample.id},"");
+    assert.equal(anonymous.response.status,200);
+    assert.equal(anonymous.result.counted,false);
     assert.equal((await state("")).articles.find(a => a.id === sample.id).views,before);
     assert.equal((await call("view",{id:sample.id})).response.status,200);
     assert.equal((await call("view",{id:sample.id})).response.status,200);

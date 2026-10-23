@@ -172,13 +172,13 @@ export function Editor() {
   };
   if (loading)
     return (
-      <main className="standalone-page">
+      <main id="main-content" tabIndex={-1} className="standalone-page">
         <div className="skeleton skeleton-large" />
       </main>
     );
   if (!data.user)
     return (
-      <main className="standalone-page">
+      <main id="main-content" tabIndex={-1} className="standalone-page">
         <Empty
           title="每一份经验，都值得被记录"
           text="登录你的账号，开始创作。草稿、发布和管理，都在这里。"
@@ -195,7 +195,7 @@ export function Editor() {
     );
   if (editId && (!current || current.author_id !== data.user.id))
     return (
-      <main className="standalone-page">
+      <main id="main-content" tabIndex={-1} className="standalone-page">
         <Empty
           title="无法编辑这篇文章"
           text="文章不存在，或你没有编辑权限。"
@@ -208,7 +208,7 @@ export function Editor() {
       </main>
     );
   return (
-    <main className={`editor-page ${full ? "editor-fullscreen" : ""}`}>
+    <main id="main-content" tabIndex={-1} className={`editor-page ${full ? "editor-fullscreen" : ""}`}>
       <div className="editor-top">
         <Link href="/dashboard" className="back-link">
           <ArrowLeft size={17} />

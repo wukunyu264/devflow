@@ -54,6 +54,13 @@ try {
     await mkdir('test-results',{recursive:true});
     await writeFile('test-results/data-reads.json',JSON.stringify({snapshots,queries,bodyQueries:1},null,2));
     console.log(`Article SSR: ${snapshots} snapshot, ${queries} bounded queries, one article body.`);
+    const warmStart = output.length;
+    const warm = await fetch(testEnv.TEST_BASE_URL + '/article/' + snapshot.articles[0].id);
+    assert.equal(warm.status,200);
+    await warm.text();
+    await new Promise(resolveFlush => setImmediate(resolveFlush));
+    assert.equal((output.slice(warmStart).match(/\[DevFlow query\]/g) || []).length,0,'Warm anonymous article must reuse the public cache');
+    console.log('Warm anonymous article SSR: zero database queries; mutations invalidate the shared public tag.');
     const portalTraceStart = output.length;
     const portal = await fetch(testEnv.TEST_BASE_URL).then(response => response.text());
     await new Promise(resolveFlush => setImmediate(resolveFlush));
@@ -64,7 +71,7 @@ try {
     const measured = await new Promise(resolveExit => measurement.on('exit',code => resolveExit(code ?? 1)));
     assert.equal(measured,0,'Production first-load measurement failed');
   }
-  const testFiles = ['tests/backend.test.mjs','tests/database.test.mjs','tests/public.test.mjs','tests/community.test.mjs','tests/article-rendering.test.mjs'];
+  const testFiles = ['tests/backend.test.mjs','tests/database.test.mjs','tests/public.test.mjs','tests/community.test.mjs','tests/article-rendering.test.mjs','tests/auth-api.test.mjs'];
   if (local) testFiles.push('tests/startup.test.mjs');
   const child = spawn(process.execPath, ['--test',...testFiles], {
     env:testEnv, stdio:'inherit', windowsHide:true,

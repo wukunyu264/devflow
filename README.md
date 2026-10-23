@@ -16,6 +16,8 @@
 4. 使用第二个账号，确认无法编辑、删除第一个账号的文章和评论。
 5. 查看 [/sitemap.xml](https://boisterous-cascaron-44d48a.netlify.app/sitemap.xml)、[/robots.txt](https://boisterous-cascaron-44d48a.netlify.app/robots.txt)，用 `curl -I` 检查 `/unknown-page` 返回 **404**；切换深色模式后刷新。
 
+注册出现「验证邮件发送额度已用尽」时，需要维护者调整 Supabase 邮件服务，刷新页面或重部署不能恢复发信额度。演示站可由维护者关闭 Confirm email；保留验证则配置自定义 SMTP。具体操作见 [注册故障处理](./DEPLOYMENT.md#注册失败先检查邮件服务p0)。匿名阅读不需要账号。
+
 ## 本地运行
 
 需要 Node.js 24。安装使用锁文件，不改构建方式：
@@ -38,6 +40,7 @@ npm run dev
 
 ```powershell
 npm run typecheck
+npm run check:auth
 npm run build
 npm run lint
 npm run test:local
@@ -48,7 +51,9 @@ npm run measure:first-load
 - `build` 始终为 `next build --webpack`；生产启动使用 `npm start`。
 - `test:local` 自动启动生产服务、清空两个 Supabase 变量，使用 `test-results/` 下独立 SQLite，完整验证注册、私有草稿、发布、持久化、互动、跨账号权限、退出、SEO、精确 404。运行前先构建，无需另开开发服务。
 - `npm test` 根据配置选择后端：Supabase 模式只对 `TEST_BASE_URL`（默认线上地址）执行匿名只读验收，明确跳过写入生命周期；本地模式运行完整用例。云端旧版本或迁移缺失时测试会失败，不会伪装通过。
-- `measure:first-load` 从 `.next` 的 client-reference/build manifest 统计入口 JS/CSS、polyfill 和 CSS；每个资源单独 gzip 后求和，排除 HTML/RSC、字体、图片、交互后动态 chunk。详细结果在忽略的 `test-results/`。
+- `check:auth` 只读检查 Supabase 注册/邮箱验证开关，不创建账号、不发邮件、不打印密钥；剩余 SMTP 额度无法从公开设置查询。
+- `measure:first-load` 从 `.next` 的 client-reference/build manifest 统计入口 JS/CSS、polyfill 和 CSS；每个资源单独 gzip 后求和，排除 HTML/RSC、字体、图片、交互后动态 chunk。保留原有保守预算（含 noModule polyfill），另列现代浏览器排除 noModule 后的数字。详细结果在忽略的 `test-results/`。
+- 匿名公开数据缓存 60 秒；登录态与私人草稿不共享缓存。站内写入即时失效，直接从 Supabase 后台修改的数据最多等缓存过期后更新；HTML/API 响应仍为 private，避免会话进入 CDN 共享缓存。修复范围与未完成项见 [QA-FIXES.md](./QA-FIXES.md)。
 
 ## 实现与结构
 

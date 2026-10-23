@@ -7,12 +7,14 @@ import { runInNewContext } from 'node:vm';
 // Excludes HTML/RSC, maps, fonts, images and chunks loaded only after interaction.
 const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:3187';
 let resources;
+let legacyResources = [];
 const manifestMode = process.argv.includes('--manifest');
 if (manifestMode) {
   const scope = {};
   runInNewContext(await readFile('.next/server/app/[[...path]]/page_client-reference-manifest.js','utf8'), scope);
   const manifest = scope.__RSC_MANIFEST['/[[...path]]/page'];
   const build = JSON.parse(await readFile('.next/build-manifest.json','utf8'));
+  legacyResources = build.polyfillFiles.map(path => '/_next/' + path);
   resources = [...new Set([...build.rootMainFiles, ...build.polyfillFiles,
     ...Object.values(manifest.clientModules).flatMap(entry => entry.chunks).filter(path => path.endsWith('.js')),
     ...Object.values(manifest.entryCSSFiles).flat().map(entry => entry.path)])].map(path => '/_next/' + path);
@@ -22,6 +24,9 @@ if (manifestMode) {
   const html = await response.text();
   await mkdir('test-results',{recursive:true});
   await writeFile(`test-results/${process.argv[2] || 'first-load'}-head.html`,html.slice(0,html.indexOf('</head>')+7));
+  legacyResources = [...html.matchAll(/<script\b[^>]*>/g)]
+    .map(match=>match[0]).filter(tag=>/\bnomodule\b/i.test(tag))
+    .map(tag=>/\bsrc="([^"]+)"/.exec(tag)?.[1]).filter(Boolean);
   resources = [...new Set([...html.matchAll(/(?:src|href)="([^"?#]+\.(?:js|css))(?:\?[^\"]*)?"/g)]
     .map(match => match[1]).filter(path => path.startsWith('/_next/static/')))];
 }
@@ -31,7 +36,10 @@ const files = await Promise.all(resources.map(async url => {
   return { url, bytes: bytes.length, gzip: gzipSync(bytes).length };
 }));
 const result = { measuredAt: new Date().toISOString(), method: manifestMode ? 'client reference manifest entry chunks + root + polyfill + CSS; gzip per resource' : 'unique JS/CSS src/href in production homepage HTML; gzip per resource',
-  bytes: files.reduce((n, file) => n + file.bytes, 0), gzip: files.reduce((n, file) => n + file.gzip, 0), files };
+  bytes: files.reduce((n, file) => n + file.bytes, 0), gzip: files.reduce((n, file) => n + file.gzip, 0),
+  modernBrowser: {method:'same resources excluding script[nomodule]; modern browsers do not execute/download these',
+    bytes:files.filter(file=>!legacyResources.includes(file.url)).reduce((n,file)=>n+file.bytes,0),
+    gzip:files.filter(file=>!legacyResources.includes(file.url)).reduce((n,file)=>n+file.gzip,0)}, files };
 await mkdir('test-results', {recursive:true});
 await writeFile(`test-results/${process.argv[2] || 'first-load'}.json`, JSON.stringify(result, null, 2));
 console.log(JSON.stringify(result, null, 2));

@@ -92,7 +92,7 @@ export function SiteApp({ initial }: { initial: Community }) {
 }
 function InfoPage({ guidelines }: { guidelines: boolean }) {
   return (
-    <main className="info-page">
+    <main id="main-content" tabIndex={-1} className="info-page">
       <Link className="back-link" href="/">
         <ArrowLeft size={15} />
         返回社区

@@ -31,13 +31,13 @@ export function Dashboard() {
   const articles = tab === "draft" ? drafts : published;
   if (loading)
     return (
-      <main className="standalone-page">
+      <main id="main-content" tabIndex={-1} className="standalone-page">
         <div className="skeleton skeleton-large" />
       </main>
     );
   if (!data.user)
     return (
-      <main className="standalone-page">
+      <main id="main-content" tabIndex={-1} className="standalone-page">
         <Empty
           title="你的创作，从这里出发"
           text="登录后管理文章、保存草稿，看到每一份分享的回响。"
@@ -50,7 +50,7 @@ export function Dashboard() {
       </main>
     );
   return (
-    <main className="community-layout wide-layout">
+    <main id="main-content" tabIndex={-1} className="community-layout wide-layout">
       <Sidebar />
       <div className="dashboard-column">
         <div className="dashboard-intro">
@@ -250,7 +250,7 @@ export function ProfilePage({ id }: { id: string }) {
   );
   if (!person)
     return (
-      <main className="standalone-page">
+      <main id="main-content" tabIndex={-1} className="standalone-page">
         <Empty
           title={loading ? "正在加载个人主页…" : "还没有找到这位创作者"}
           action={
@@ -262,7 +262,7 @@ export function ProfilePage({ id }: { id: string }) {
       </main>
     );
   return (
-    <main className="community-layout wide-layout">
+    <main id="main-content" tabIndex={-1} className="community-layout wide-layout">
       <Sidebar />
       <div className="profile-column">
         <div className="profile-banner">

@@ -7,6 +7,7 @@
     "build": "next build --webpack",
     "start": "node scripts/start.mjs --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit",
+    "check:auth": "node scripts/check-auth-config.mjs",
     "test": "node scripts/run-tests.mjs",
     "test:local": "node scripts/run-tests.mjs --local",
     "seed:sql": "node --experimental-strip-types scripts/generate-seed.mts",

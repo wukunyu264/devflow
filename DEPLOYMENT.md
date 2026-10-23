@@ -62,6 +62,23 @@ npm run test:local
 
 Supabase Authentication → URL Configuration：Site URL 设置为正式博客地址，必要时允许 `http://localhost:3000`。保留邮箱验证时，面试测试账号应提前验证邮箱。
 
+#### 注册失败：先检查邮件服务（P0）
+
+`npm run check:auth` 只读检查注册是否开放、Email provider 是否启用、是否要求验证邮箱。它不会注册用户或发送邮件，也无法查询剩余邮件额度。
+
+本次 QA 的上游错误是 `over_email_send_rate_limit`：验证邮件发送受限，重新部署或换邮箱不能解决项目级发信限流。代码现在返回 HTTP 429 和明确中文提示，不再伪装成一般输入错误。
+
+需要账号持有人选择并操作：
+
+1. **演示站快速恢复**：打开 [Supabase Email 登录设置](https://supabase.com/dashboard/project/wtcfwusksgcklfrvbqij/auth/providers)，进入 **Email**，关闭 **Confirm email**，保存。此后新注册会直接创建登录会话；邮箱未经验证，不能把邮箱视作已核实身份。既有未确认账号不保证自动转为已确认，应在 Users 中检查状态或使用新的测试邮箱。
+2. **保留邮箱验证**：在 Authentication → Emails → SMTP Settings 配置自己的 SMTP，再检查 Auth rate limits。默认邮件服务不适合公开注册：有低发信限额且收件人受限制。只提高应用限流或反复点击注册无效。SMTP 凭据只填 Supabase 后台，不进入仓库或 Netlify 公共变量。
+3. 在 [URL Configuration](https://supabase.com/dashboard/project/wtcfwusksgcklfrvbqij/auth/url-configuration) 确认 Site URL 是正式博客地址，保存。
+4. 无痕打开 `/register`，用自己控制的新邮箱注册，确认页面进入登录状态，再验证发布、点赞、评论和退出。关闭 Confirm email 属于 Supabase 后台设置，保存后即影响 Auth，无需重新构建；本次代码提示更新则必须完成 Netlify 发布。
+
+不在 README 公开可写演示账号密码；访客可以匿名阅读，交互验收使用维护者预先准备的账号。
+
+参考：[Supabase 邮件服务限制](https://supabase.com/docs/guides/auth/auth-smtp)、[认证限流](https://supabase.com/docs/guides/auth/rate-limits)、[Confirm email 设置](https://supabase.com/docs/guides/auth/general-configuration)。
+
 ### 4. 部署后验收
 
 ```powershell
