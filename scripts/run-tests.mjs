@@ -58,7 +58,7 @@ try {
     const measured = await new Promise(resolveExit => measurement.on('exit',code => resolveExit(code ?? 1)));
     assert.equal(measured,0,'Production first-load measurement failed');
   }
-  const testFiles = ['tests/backend.test.mjs','tests/database.test.mjs','tests/public.test.mjs','tests/community.test.mjs'];
+  const testFiles = ['tests/backend.test.mjs','tests/database.test.mjs','tests/public.test.mjs','tests/community.test.mjs','tests/article-rendering.test.mjs'];
   if (local) testFiles.push('tests/startup.test.mjs');
   const child = spawn(process.execPath, ['--test',...testFiles], {
     env:testEnv, stdio:'inherit', windowsHide:true,

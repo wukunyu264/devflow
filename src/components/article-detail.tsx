@@ -48,7 +48,7 @@ export function ArticleDetail({ id }: { id: string }) {
   useEffect(() => {
     window.scrollTo(0, 0);
     if (!data.user) return;
-    const key = `df-view-${data.user.id}-${id}-${new Date().toISOString().slice(0,10)}`;
+    const key = `df-view-${data.user.id}-${id}-${new Date().toISOString().slice(0, 10)}`;
     if (!sessionStorage.getItem(key))
       request("view", { id })
         .then(() => {
@@ -57,35 +57,68 @@ export function ArticleDetail({ id }: { id: string }) {
         .catch(() => {});
   }, [id, data.user]);
   useEffect(() => {
-    const updateHeadings = () => setHeadings(
-      Array.from(
-        document.querySelectorAll(".article-body h2, .article-body h3"),
-      ).map((node) => ({
-        title: node.textContent || "",
-        id: node.id,
-        level: Number(node.tagName[1]),
-      })),
-    );
-    const onScroll = () => {
+    const container = document.querySelector(".article-body");
+    if (!container) return;
+    let nodes: Element[] = [];
+    let indexed: { title: string; id: string; level: number }[] = [];
+    let hasIndex = false;
+    let needsIndex = true;
+    let frame: number | null = null;
+    const update = () => {
+      frame = null;
+      if (needsIndex) {
+        needsIndex = false;
+        nodes = Array.from(container.querySelectorAll("h2, h3"));
+        const next = nodes.map((node) => ({
+          title: node.textContent || "",
+          id: node.id,
+          level: Number(node.tagName[1]),
+        }));
+        // DOM replacement can be caused by React itself. Publishing a new array
+        // for identical headings would feed another render back into this observer.
+        if (
+          !hasIndex ||
+          next.length !== indexed.length ||
+          next.some(
+            (h, i) =>
+              h.id !== indexed[i].id ||
+              h.title !== indexed[i].title ||
+              h.level !== indexed[i].level,
+          )
+        ) {
+          indexed = next;
+          hasIndex = true;
+          setHeadings(next);
+        }
+      }
       const distance =
         document.documentElement.scrollHeight - window.innerHeight;
       setProgress(
         distance > 0 ? Math.min(100, (window.scrollY / distance) * 100) : 100,
       );
-      const headings = Array.from(
-        document.querySelectorAll(".article-body h2, .article-body h3"),
-      );
-      const current = headings
-        .filter((h) => h.getBoundingClientRect().top < 170)
-        .at(-1);
-      if (current) setActiveHeading(current.id);
+      let current = "";
+      for (const node of nodes) {
+        if (node.getBoundingClientRect().top < 170) current = node.id;
+      }
+      setActiveHeading(current);
     };
-    const container = document.querySelector(".article-body");
-    const observer = new MutationObserver(updateHeadings);
-    if (container) observer.observe(container, {childList:true,subtree:true});
-    const initialFrame = requestAnimationFrame(() => { updateHeadings(); onScroll(); });
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => { cancelAnimationFrame(initialFrame); observer.disconnect(); window.removeEventListener("scroll", onScroll); };
+    const schedule = () => {
+      if (frame === null) frame = requestAnimationFrame(update);
+    };
+    const observer = new MutationObserver(() => {
+      needsIndex = true;
+      schedule();
+    });
+    observer.observe(container, { childList: true, subtree: true });
+    schedule();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
   }, [article?.content, id]);
   if (!article)
     return (

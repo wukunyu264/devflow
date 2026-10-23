@@ -1,10 +1,10 @@
 "use client";
-import Markdown from "react-markdown";
+import Markdown, { type Components } from "react-markdown";
 import Image from "next/image";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "@/lib/highlight";
 import { Check, Copy } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { memo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import type { Root, Element, RootContent } from "hast";
 export function headingId(text: string) {
@@ -91,33 +91,53 @@ function CodeBlock({ children }: { children?: ReactNode }) {
     </div>
   );
 }
-export function MarkdownContent({ content }: { content: string }) {
+// Stable component identities preserve the rendered DOM and code-copy state.
+const components: Components = {
+  h2: ({ children, id }) => <h2 id={id}>{children}</h2>,
+  h3: ({ children, id }) => <h3 id={id}>{children}</h3>,
+  pre: ({ children }) => <CodeBlock>{children}</CodeBlock>,
+  a: ({ children, href }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  ),
+  img: ({ alt, src }) =>
+    typeof src === "string" ? (
+      <Image
+        src={src}
+        alt={alt || "文章配图"}
+        width={1200}
+        height={800}
+        unoptimized
+        loading="lazy"
+        style={{ width: "100%", height: "auto" }}
+      />
+    ) : null,
+  table: ({ children }) => (
+    <div className="table-scroll">
+      <table>{children}</table>
+    </div>
+  ),
+};
+const remarkPlugins = [remarkGfm];
+const rehypePlugins = [rehypeHighlight, headingIds];
+
+// Scrolling, typing a comment and updating the TOC must not reparse/highlight
+// the entire article. Only a changed body should rerender this subtree.
+export const MarkdownContent = memo(function MarkdownContent({
+  content,
+}: {
+  content: string;
+}) {
   return (
     <div className="prose">
       <Markdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight, headingIds]}
-        components={{
-          h2: ({ children, id }) => <h2 id={id}>{children}</h2>,
-          h3: ({ children, id }) => <h3 id={id}>{children}</h3>,
-          pre: ({ children }) => <CodeBlock>{children}</CodeBlock>,
-          a: ({ children, href }) => (
-            <a href={href} target="_blank" rel="noopener noreferrer">
-              {children}
-            </a>
-          ),
-          img: ({ alt, src }) => typeof src === "string" ? (
-            <Image src={src} alt={alt || "文章配图"} width={1200} height={800} unoptimized loading="lazy" style={{width:"100%",height:"auto"}} />
-          ) : null,
-          table: ({ children }) => (
-            <div className="table-scroll">
-              <table>{children}</table>
-            </div>
-          ),
-        }}
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
+        components={components}
       >
         {content}
       </Markdown>
     </div>
   );
-}
+});
