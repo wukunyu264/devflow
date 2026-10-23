@@ -16,19 +16,11 @@ import {
   PenLine,
   ChevronRight,
   Flame,
-  Code2,
-  Zap,
   Compass,
   Hash,
 } from "lucide-react";
 import { useCommunity } from "./community-provider";
-import {
-  Avatar,
-  Cover,
-  Empty,
-  formatCount,
-  formatDate,
-} from "./ui";
+import { Avatar, Cover, Empty, formatCount, formatDate } from "./ui";
 import type { ArticleSummary } from "@/lib/types";
 import { categories } from "@/lib/types";
 import { Sidebar } from "./navigation";
@@ -270,69 +262,58 @@ export function RightSidebar() {
 }
 function Hero({ ai = false }: { ai?: boolean }) {
   return (
-    <section className={`hero ${ai ? "hero-ai" : ""}`}>
-      <div className="hero-content">
-        <div className="hero-eyebrow">
-          <span />
+    <section className={`brand-hero ${ai ? "brand-hero-ai" : ""}`}>
+      <div className="brand-hero-inner">
+        <div className="brand-hero-copy">
+          <div className="brand-hero-eyebrow">
+            <span className="brand-hero-marker" />
+            <span>
+              {ai
+                ? "THE NEXT CHAPTER OF BUILDING"
+                : "A SPACE FOR CURIOUS MINDS"}
+            </span>
+          </div>
+          <h1>
+            {ai ? (
+              <>
+                与 AI 一起，
+                <br />
+                探索<span className="brand-hero-emphasis">下一个可能</span>。
+              </>
+            ) : (
+              <>
+                让技术沉淀，
+                <br />
+                让灵感<span className="brand-hero-emphasis">自由流动</span>。
+              </>
+            )}
+          </h1>
+          <p>
+            {ai
+              ? "从模型到应用，从第一个 Prompt 到真正的产品。"
+              : "发现值得阅读的内容，遇见一起成长的开发者。"}
+          </p>
+          <Link
+            className="brand-hero-cta"
+            href={ai ? "/write" : "/category/ai"}
+          >
+            {ai ? "分享你的 AI 实践" : "探索 AI 的更多可能"}
+            <ArrowUpRight size={15} />
+          </Link>
+        </div>
+        <div className="brand-hero-art" aria-hidden="true">
+          <span className="brand-hero-coordinate">01 / IDEAS INTO IMPACT</span>
+          <span className="brand-hero-art-caption">KNOWLEDGE IN MOTION</span>
+        </div>
+        <div className="brand-hero-baseline" aria-hidden="true">
+          <span>DEVFLOW / OPEN JOURNAL</span>
           <span>
-            {ai ? "THE NEXT CHAPTER OF BUILDING" : "A SPACE FOR CURIOUS MINDS"}
+            保持好奇，持续生长 <ArrowRight size={13} />
           </span>
         </div>
-        <h1>
-          {ai ? (
-            <>
-              与 AI 一起，
-              <br />
-              探索下一个可能<span>。</span>
-            </>
-          ) : (
-            <>
-              让技术沉淀，
-              <br />
-              让灵感<span className="hero-emphasis">自由流动</span>。
-            </>
-          )}
-        </h1>
-        <p>
-          {ai
-            ? "从模型到应用，从第一个 Prompt 到真正的产品。"
-            : "发现值得阅读的内容，遇见一起成长的开发者。"}
-        </p>
-        <Link className="hero-cta" href={ai ? "/write" : "/category/ai"}>
-          {ai ? "分享你的 AI 实践" : "探索 AI 的更多可能"}
-          <ArrowUpRight size={15} />
-        </Link>
-      </div>
-      <div className="hero-art" aria-hidden="true">
-        <div className="orbital orbital-1" />
-        <div className="orbital orbital-2" />
-        <div className="orbital orbital-3" />
-        <div className="hero-code">
-          <span className="code-corner top-left" />
-          <span className="code-corner bottom-right" />
-          <Code2 size={58} strokeWidth={1.4} />
-        </div>
-        <span className="orbit-node node-one">
-          <Sparkles size={18} />
-        </span>
-        <span className="orbit-node node-two">
-          <BracesIcon />
-        </span>
-        <span className="orbit-node node-three">
-          <Zap size={15} />
-        </span>
-        <span className="hero-art-label">IDEAS INTO IMPACT.</span>
-        <span className="star star-one">✳</span>
-        <span className="star star-two">+</span>
-      </div>
-      <div className="hero-bottom-label">
-        DEVFLOW JOURNAL <span>VOL. 024</span>
       </div>
     </section>
   );
-}
-function BracesIcon() {
-  return <span className="braces-icon">{"{ }"}</span>;
 }
 export function Feed({
   kind = "home",
@@ -406,159 +387,161 @@ export function Feed({
             : currentCategory?.label || "为你推荐";
   const showHero = (kind === "home" && !following) || category === "ai";
   return (
-    <main className="community-layout">
-      <Sidebar />
-      <div className="feed-column">
-        {showHero && <Hero ai={category === "ai"} />}
-        {kind === "discover" && (
-          <div className="discover-intro">
-            <span className="eyebrow">FIND YOUR NEXT INSPIRATION</span>
-            <h1>
-              {title}
-              <span>↗</span>
-            </h1>
-            <p>每一份好奇，都有值得深入的方向。</p>
-            <div className="topic-grid">
-              {categories.slice(0, 6).map((c, i) => (
-                <Link key={c.slug} href={`/category/${c.slug}`}>
-                  <span>0{i + 1}</span>
-                  <strong>{c.label}</strong>
-                  <small>
-                    {
-                      data.articles.filter(
-                        (a) =>
-                          a.category === c.slug && a.status === "published",
-                      ).length
-                    }{" "}
-                    篇文章
-                    <ArrowUpRight size={14} />
-                  </small>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-        {!showHero && kind !== "discover" && (
-          <div className="page-intro">
-            <span className="eyebrow">
-              {kind === "bookmarks"
-                ? "YOUR PERSONAL READING LIST"
-                : kind === "trending"
-                  ? "WORTH YOUR ATTENTION"
-                  : kind === "search"
-                    ? "FOLLOW YOUR CURIOSITY"
-                    : "EXPLORE & KEEP GROWING"}
-            </span>
-            <h1>
-              {title}
-              {kind === "trending" && <Flame size={27} />}
-            </h1>
-            <p>
-              {kind === "bookmarks"
-                ? "把好内容留在这里，随时回来继续阅读。"
-                : kind === "search"
-                  ? `找到 ${list.length} 篇相关内容`
-                  : following
-                    ? "来自你关注的创作者，新的思考和新的发现。"
-                    : "在分享与交流中，找到让自己成长的答案。"}
-            </p>
-          </div>
-        )}
-        <section className="article-list-panel">
-          <div className="feed-tabs">
-            <div className="tab-group">
-              {(kind === "search" || kind === "bookmarks"
-                ? [
-                    [
-                      "recommend",
-                      kind === "bookmarks" ? "全部收藏" : "全部结果",
-                    ],
-                    ["latest", "最新发布"],
-                  ]
-                : [
-                    ["recommend", "推荐"],
-                    ["latest", "最新"],
-                    ["hot", "热门"],
-                  ]
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  onClick={() => {
-                    setSort(value);
-                    setVisible(7);
-                  }}
-                  className={sort === value ? "tab active" : "tab"}
-                >
-                  {value === "recommend" &&
-                    kind !== "search" &&
-                    kind !== "bookmarks" && <Sparkles size={15} />}
-                  {label}
-                </button>
-              ))}
-            </div>
-            <span className="feed-caption">
-              {kind === "home" && !following
-                ? "每一次阅读，都是一次成长"
-                : `${list.length} 篇文章`}
-            </span>
-          </div>
-          {kind === "bookmarks" && !data.user ? (
-            <Empty
-              title="你的私人灵感书架"
-              text="登录后，收藏喜欢的文章，随时回来阅读。"
-              action={
-                <Link
-                  href="/login?next=%2Fbookmarks"
-                  className="button primary"
-                >
-                  登录，开启收藏
-                </Link>
-              }
-            />
-          ) : !list.length ? (
-            <Empty
-              title={
-                following
-                  ? "关注有趣的人，让灵感先来找你"
-                  : "还没有找到相关内容"
-              }
-              text={
-                following
-                  ? "在右侧发现创作者，关注后就能在这里看到他们的文章。"
-                  : "换个关键词，或探索一个新的技术方向。"
-              }
-              action={
-                <Link className="button secondary" href="/discover">
-                  去发现内容 <Compass size={15} />
-                </Link>
-              }
-            />
-          ) : (
-            <>
-              {list.slice(0, visible).map((article) => (
-                <ArticleCard key={article.id} article={article} />
-              ))}
-              <div className="load-more">
-                {visible < list.length ? (
-                  <button onClick={() => setVisible((v) => v + 7)}>
-                    发现更多好内容 <ArrowRight size={15} />
-                  </button>
-                ) : (
-                  <span>
-                    <span />
-                    你已经读完了这里的全部内容
-                    <span />
-                  </span>
-                )}
+    <main className="community-page">
+      {showHero && <Hero ai={category === "ai"} />}
+      <div className="community-layout editorial-feed">
+        <Sidebar />
+        <div className="feed-column">
+          {kind === "discover" && (
+            <div className="discover-intro">
+              <span className="eyebrow">FIND YOUR NEXT INSPIRATION</span>
+              <h1>
+                {title}
+                <span>↗</span>
+              </h1>
+              <p>每一份好奇，都有值得深入的方向。</p>
+              <div className="topic-grid">
+                {categories.slice(0, 6).map((c, i) => (
+                  <Link key={c.slug} href={`/category/${c.slug}`}>
+                    <span>0{i + 1}</span>
+                    <strong>{c.label}</strong>
+                    <small>
+                      {
+                        data.articles.filter(
+                          (a) =>
+                            a.category === c.slug && a.status === "published",
+                        ).length
+                      }{" "}
+                      篇文章
+                      <ArrowUpRight size={14} />
+                    </small>
+                  </Link>
+                ))}
               </div>
-            </>
+            </div>
           )}
-        </section>
-        <div className="feed-end">
-          <span className="little-spark">✳</span>保持好奇，持续生长。
+          {!showHero && kind !== "discover" && (
+            <div className="page-intro">
+              <span className="eyebrow">
+                {kind === "bookmarks"
+                  ? "YOUR PERSONAL READING LIST"
+                  : kind === "trending"
+                    ? "WORTH YOUR ATTENTION"
+                    : kind === "search"
+                      ? "FOLLOW YOUR CURIOSITY"
+                      : "EXPLORE & KEEP GROWING"}
+              </span>
+              <h1>
+                {title}
+                {kind === "trending" && <Flame size={27} />}
+              </h1>
+              <p>
+                {kind === "bookmarks"
+                  ? "把好内容留在这里，随时回来继续阅读。"
+                  : kind === "search"
+                    ? `找到 ${list.length} 篇相关内容`
+                    : following
+                      ? "来自你关注的创作者，新的思考和新的发现。"
+                      : "在分享与交流中，找到让自己成长的答案。"}
+              </p>
+            </div>
+          )}
+          <section className="article-list-panel">
+            <div className="feed-tabs">
+              <div className="tab-group">
+                {(kind === "search" || kind === "bookmarks"
+                  ? [
+                      [
+                        "recommend",
+                        kind === "bookmarks" ? "全部收藏" : "全部结果",
+                      ],
+                      ["latest", "最新发布"],
+                    ]
+                  : [
+                      ["recommend", "推荐"],
+                      ["latest", "最新"],
+                      ["hot", "热门"],
+                    ]
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    onClick={() => {
+                      setSort(value);
+                      setVisible(7);
+                    }}
+                    className={sort === value ? "tab active" : "tab"}
+                  >
+                    {value === "recommend" &&
+                      kind !== "search" &&
+                      kind !== "bookmarks" && <Sparkles size={15} />}
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <span className="feed-caption">
+                {kind === "home" && !following
+                  ? "每一次阅读，都是一次成长"
+                  : `${list.length} 篇文章`}
+              </span>
+            </div>
+            {kind === "bookmarks" && !data.user ? (
+              <Empty
+                title="你的私人灵感书架"
+                text="登录后，收藏喜欢的文章，随时回来阅读。"
+                action={
+                  <Link
+                    href="/login?next=%2Fbookmarks"
+                    className="button primary"
+                  >
+                    登录，开启收藏
+                  </Link>
+                }
+              />
+            ) : !list.length ? (
+              <Empty
+                title={
+                  following
+                    ? "关注有趣的人，让灵感先来找你"
+                    : "还没有找到相关内容"
+                }
+                text={
+                  following
+                    ? "在右侧发现创作者，关注后就能在这里看到他们的文章。"
+                    : "换个关键词，或探索一个新的技术方向。"
+                }
+                action={
+                  <Link className="button secondary" href="/discover">
+                    去发现内容 <Compass size={15} />
+                  </Link>
+                }
+              />
+            ) : (
+              <>
+                {list.slice(0, visible).map((article) => (
+                  <ArticleCard key={article.id} article={article} />
+                ))}
+                <div className="load-more">
+                  {visible < list.length ? (
+                    <button onClick={() => setVisible((v) => v + 7)}>
+                      发现更多好内容 <ArrowRight size={15} />
+                    </button>
+                  ) : (
+                    <span>
+                      <span />
+                      你已经读完了这里的全部内容
+                      <span />
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+          </section>
+          <div className="feed-end">
+            <span className="little-spark">✳</span>保持好奇，持续生长。
+          </div>
         </div>
+        <RightSidebar />
       </div>
-      <RightSidebar />
     </main>
   );
 }

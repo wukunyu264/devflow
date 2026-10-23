@@ -283,11 +283,24 @@ export function Sidebar() {
 export function Footer() {
   return (
     <footer className="site-footer">
-      <Logo small />
-      <span>让技术沉淀，让灵感流动。</span>
-      <Link href="/about">
-        关于 DevFlow <ArrowRight size={13} />
-      </Link>
+      <div className="footer-inner">
+        <div className="footer-brand">
+          <Logo small />
+          <p>让技术沉淀，让灵感流动。</p>
+        </div>
+        <nav className="footer-links" aria-label="页脚导航">
+          <Link href="/discover">发现内容</Link>
+          <Link href="/category/ai">AI 专区</Link>
+          <Link href="/about">
+            关于 DevFlow <ArrowRight size={13} />
+          </Link>
+          <Link href="/guidelines">社区公约</Link>
+        </nav>
+        <div className="footer-baseline">
+          <span>DEVFLOW / BUILT FOR DEVELOPERS</span>
+          <span>© 2026 DevFlow</span>
+        </div>
+      </div>
     </footer>
   );
 }

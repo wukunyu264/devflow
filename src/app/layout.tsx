@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./editorial.css";
 import { siteUrl } from "@/lib/site";
 const themeScript = `(function(){var p;try{p=localStorage.getItem('devflow-theme')}catch(e){}var d=p?p==='dark':matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.theme=d?'dark':'light';document.documentElement.style.colorScheme=d?'dark':'light'})()`;
 export const metadata: Metadata = {
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#087f72",
+  themeColor: "#12161e",
 };
 export default function RootLayout({
   children,
@@ -29,7 +30,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-      <head><script id="devflow-theme" dangerouslySetInnerHTML={{__html:themeScript}} /></head>
+      <head>
+        <script
+          id="devflow-theme"
+          dangerouslySetInnerHTML={{ __html: themeScript }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );
