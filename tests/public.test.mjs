@@ -37,11 +37,17 @@ test('anonymous list and detail projections, SEO and exact 404 status', async ()
   assert.ok(home.indexOf('id="devflow-theme"') < home.indexOf('</head>'));
   const theme = /<script id="devflow-theme">([\s\S]*?)<\/script>/.exec(home)?.[1];
   assert.ok(theme);
-  for (const stored of ['dark',null]) {
-    const document = {documentElement:{dataset:{},style:{}}};
+  for (const stored of ['dark',null,'light']) {
+    const removed = [];
+    const whitespace = {nodeType:3,textContent:'\n  ',remove(){removed.push('whitespace')}};
+    const scriptNode = {nodeType:1,textContent:'theme code',remove(){removed.push('script')}};
+    const comment = {nodeType:8,textContent:'Netlify hosting comment',remove(){removed.push('comment')}};
+    const meaningfulText = {nodeType:3,textContent:'preserve this',remove(){removed.push('text')}};
+    const document = {head:{childNodes:[whitespace,comment,scriptNode,meaningfulText]},documentElement:{dataset:{},style:{}}};
     runInNewContext(theme,{document,localStorage:{getItem:()=>stored},matchMedia:()=>({matches:true})});
-    assert.equal(document.documentElement.dataset.theme,'dark');
-    assert.equal(document.documentElement.style.colorScheme,'dark');
+    assert.equal(document.documentElement.dataset.theme,stored === 'light' ? 'light' : 'dark');
+    assert.equal(document.documentElement.style.colorScheme,stored === 'light' ? 'light' : 'dark');
+    assert.deepEqual(removed,['whitespace'],'Only ignorable head text may be removed, never scripts, styles, comments or meaningful content');
   }
   const articleResponse = await fetch(base + '/article/' + first.id);
   assert.equal(articleResponse.status, 200);

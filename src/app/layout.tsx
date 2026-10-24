@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./editorial.css";
 import { siteUrl } from "@/lib/site";
-const themeScript = `(function(){var p;try{p=localStorage.getItem('devflow-theme')}catch(e){}var d=p?p==='dark':matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.theme=d?'dark':'light';document.documentElement.style.colorScheme=d?'dark':'light'})()`;
+// Netlify's hosting comment adds a whitespace text node between head resources.
+// React's head hydration scan stops at text nodes. Normalize only ignorable
+// direct head whitespace before hydration, preserving scripts/styles/content.
+const themeScript = `(function(){var h=document.head;if(h)Array.from(h.childNodes).forEach(function(n){if(n.nodeType===3&&!n.textContent.trim())n.remove()});var p;try{p=localStorage.getItem('devflow-theme')}catch(e){}var d=p?p==='dark':matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.theme=d?'dark':'light';document.documentElement.style.colorScheme=d?'dark':'light'})()`;
 export const metadata: Metadata = {
   metadataBase: siteUrl,
   title: { default: "DevFlow — 开发者灵感社区", template: "%s · DevFlow" },
