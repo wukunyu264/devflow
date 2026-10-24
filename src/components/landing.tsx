@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ComponentProps } from "react";
 import { LandingMotion } from "./landing-motion";
+import { LandingUniverse } from "./landing-universe";
+import { LandingTopics } from "./landing-topics";
 import styles from "./landing.module.css";
 
 function Arrow({ diagonal = false }: { diagonal?: boolean }) {
@@ -107,7 +109,7 @@ export function Landing() {
           <PortalLink href="/community">技术社区</PortalLink>
           <PortalLink href="/discover">发现</PortalLink>
           <PortalLink href="/category/ai">AI 专区</PortalLink>
-          <PortalLink href="#explore">探索 DevFlow</PortalLink>
+          <PortalLink href="#knowledge">知识地图</PortalLink>
         </nav>
         <PortalLink href="/dashboard" className={styles.headerCta}>
           创作中心 <Arrow diagonal />
@@ -146,79 +148,18 @@ export function Landing() {
               </div>
               <p className={styles.heroNote}>记录热爱 · 分享经验 · 连接彼此</p>
             </div>
-            <div className={styles.scene} aria-hidden="true">
-              <div className={styles.sceneOrbit} />
-              <div className={styles.orb}>
-                <span>
-                  Ideas
-                  <br />
-                  in motion.
-                </span>
-                <i />
-              </div>
-              <div className={styles.codeWindow}>
-                <div className={styles.windowBar}>
-                  <span>
-                    <i />
-                    <i />
-                    <i />
-                  </span>
-                  <small>hello, devflow</small>
-                  <span>↗</span>
-                </div>
-                <div className={styles.codeLines}>
-                  <p>
-                    <em>const</em> idea = {"{"}
-                  </p>
-                  <p>
-                    &nbsp; curiosity: <b>true</b>,
-                  </p>
-                  <p>
-                    &nbsp; possibilities: <b>Infinity</b>,
-                  </p>
-                  <p>
-                    &nbsp; next: <strong>&apos;start building&apos;</strong>
-                  </p>
-                  <p>{"}"};</p>
-                  <p className={styles.codeComment}>
-                    {"// make something that matters."}
-                  </p>
-                </div>
-                <span className={styles.codeCursor} />
-              </div>
-              <div className={styles.journalCard}>
-                <div className={styles.journalTop}>
-                  <span>DEVFLOW JOURNAL</span>
-                  <span>↗</span>
-                </div>
-                <div className={styles.journalArt}>
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <small>THOUGHTS WORTH SHARING</small>
-                <strong>
-                  每一份经验，
-                  <br />
-                  都有新的可能。
-                </strong>
-                <div className={styles.journalRule} />
-                <span className={styles.journalBottom}>
-                  READ. BUILD. SHARE.
-                </span>
-              </div>
-              <span className={styles.sceneTag}>由好奇驱动，为创造而生 ↗</span>
-              <span className={styles.sceneCross}>+</span>
-            </div>
+            <LandingUniverse />
           </div>
           <div className={styles.heroBottom}>
             <span>OPEN KNOWLEDGE. ENDLESS POSSIBILITIES.</span>
-            <PortalLink href="#explore">
+            <PortalLink href="#knowledge">
               向下探索 <span>↓</span>
             </PortalLink>
             <span>DEVFLOW / COMMUNITY</span>
           </div>
         </section>
+
+        <LandingTopics />
 
         <section
           className={styles.explore}
@@ -226,7 +167,7 @@ export function Landing() {
           aria-labelledby="explore-title"
         >
           <div className={styles.sectionIntro} data-landing-reveal>
-            <p className={styles.sectionLabel}>01 / FIND YOUR NEXT CHAPTER</p>
+            <p className={styles.sectionLabel}>02 / FIND YOUR NEXT CHAPTER</p>
             <div>
               <h2 id="explore-title">
                 从好奇开始，
@@ -282,7 +223,7 @@ export function Landing() {
           <div className={styles.createInner}>
             <div data-landing-reveal>
               <p className={styles.sectionLabel}>
-                02 / YOUR IDEAS DESERVE A HOME
+                03 / YOUR IDEAS DESERVE A HOME
               </p>
               <h2 id="create-title">
                 不止于阅读，

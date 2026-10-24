@@ -7,3 +7,6 @@ data/
 *.tsbuildinfo
 test-results/
 .chrome-tmp/
+# Separate internship reference sources and scratch files are not part of DevFlow.
+gitea/
+tmp/

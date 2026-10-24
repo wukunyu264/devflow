@@ -1,6 +1,60 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
+
+const MotionPaused = createContext(false);
+
+export function useVisualActivity(
+  ref: RefObject<HTMLElement | null>,
+  rootMargin = "0px",
+) {
+  const paused = useContext(MotionPaused);
+  const [activity, setActivity] = useState({
+    visible: false,
+    hidden: false,
+    reduced: false,
+  });
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    let visible = false;
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () =>
+      setActivity({
+        visible,
+        hidden: document.hidden,
+        reduced: preference.matches,
+      });
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry.isIntersecting;
+        sync();
+      },
+      { rootMargin },
+    );
+    observer.observe(element);
+    preference.addEventListener("change", sync);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      observer.disconnect();
+      preference.removeEventListener("change", sync);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [ref, rootMargin]);
+  return {
+    visible: activity.visible,
+    animate:
+      activity.visible && !activity.hidden && !activity.reduced && !paused,
+  };
+}
 
 export function LandingMotion({
   children,
@@ -59,30 +113,32 @@ export function LandingMotion({
   }, []);
 
   return (
-    <div
-      ref={root}
-      className={className}
-      data-landing-root
-      data-user-paused={paused}
-    >
-      {children}
-      <button
-        className={controlClassName}
-        onClick={() => setPaused((value) => !value)}
-        aria-label={paused ? "播放首页动画" : "暂停首页动画"}
-        aria-pressed={paused}
+    <MotionPaused.Provider value={paused}>
+      <div
+        ref={root}
+        className={className}
+        data-landing-root
+        data-user-paused={paused}
       >
-        {paused ? (
-          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-            <path d="m5 3 8 5-8 5Z" fill="currentColor" />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-            <path d="M4 3h3v10H4zm5 0h3v10H9z" fill="currentColor" />
-          </svg>
-        )}
-        <span>{paused ? "播放动画" : "暂停动画"}</span>
-      </button>
-    </div>
+        {children}
+        <button
+          className={controlClassName}
+          onClick={() => setPaused((value) => !value)}
+          aria-label={paused ? "播放首页动画" : "暂停首页动画"}
+          aria-pressed={paused}
+        >
+          {paused ? (
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+              <path d="m5 3 8 5-8 5Z" fill="currentColor" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+              <path d="M4 3h3v10H4zm5 0h3v10H9z" fill="currentColor" />
+            </svg>
+          )}
+          <span>{paused ? "播放动画" : "暂停动画"}</span>
+        </button>
+      </div>
+    </MotionPaused.Provider>
   );
 }

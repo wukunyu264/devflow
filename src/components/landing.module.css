@@ -226,247 +226,6 @@
   animation: scrollHint 2.5s ease-in-out infinite;
 }
 
-/* A moving, original product illustration. No video, WebGL or animation loop. */
-.scene {
-  position: relative;
-  min-width: 0;
-  height: 440px;
-  perspective: 1200px;
-  pointer-events: none;
-}
-.sceneOrbit {
-  position: absolute;
-  width: 440px;
-  height: 440px;
-  border: 1px solid #ffffff20;
-  border-radius: 50%;
-  left: 8px;
-  top: -12px;
-  transform: rotate(-24deg) scaleY(0.85);
-}
-.sceneOrbit::before,
-.sceneOrbit::after {
-  content: "";
-  position: absolute;
-  inset: 32px;
-  border: 1px solid #ffffff12;
-  border-radius: 50%;
-}
-.sceneOrbit::after {
-  inset: -32px;
-  border-color: #ffffff0d;
-}
-.orb {
-  position: absolute;
-  right: 14px;
-  top: -10px;
-  width: 172px;
-  height: 172px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(
-    circle at 30% 20%,
-    #f5fbff,
-    #a7ccff 35%,
-    #8e8afa 65%,
-    #5569df 85%
-  );
-  box-shadow:
-    inset -15px -15px 30px #2b31c955,
-    0 20px 60px #12289655;
-  transform: rotate(12deg);
-  animation: orbFloat 10s ease-in-out infinite;
-}
-.orb > span {
-  position: relative;
-  z-index: 1;
-  color: #293775;
-  font:
-    italic 24px/1.05 Georgia,
-    serif;
-  text-align: center;
-}
-.orb > i {
-  position: absolute;
-  inset: 16px -14px;
-  border: 1px solid #dce9ff99;
-  border-radius: 50%;
-  transform: rotate(-25deg);
-}
-.codeWindow {
-  position: absolute;
-  width: 330px;
-  height: 244px;
-  right: -8px;
-  top: 132px;
-  border: 1px solid #6c8bf6;
-  border-radius: 12px;
-  background: #101c49;
-  box-shadow: 0 32px 70px #0c18654a;
-  transform: rotate(7deg);
-  animation: codeFloat 12s ease-in-out infinite;
-  overflow: hidden;
-}
-.windowBar {
-  height: 40px;
-  border-bottom: 1px solid #ffffff18;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 15px;
-  color: #a9b8e4;
-}
-.windowBar > span:first-child {
-  display: flex;
-  gap: 5px;
-}
-.windowBar i {
-  height: 5px;
-  width: 5px;
-  border-radius: 50%;
-  background: #7785ad;
-}
-.windowBar small {
-  font:
-    9px Consolas,
-    monospace;
-}
-.codeLines {
-  padding: 22px 22px 0;
-  font:
-    12px/1.9 Consolas,
-    monospace;
-  color: #e4eaff;
-}
-.codeLines em {
-  color: #bba5ff;
-  font-style: normal;
-}
-.codeLines b {
-  color: #ffcf93;
-  font-weight: 400;
-}
-.codeLines strong {
-  color: #a6e4ca;
-  font-weight: 400;
-}
-.codeLines .codeComment {
-  margin-top: 8px;
-  color: #91a2d1;
-  font-size: 10px;
-}
-.codeCursor {
-  position: absolute;
-  bottom: 21px;
-  right: 24px;
-  height: 11px;
-  width: 5px;
-  background: #a6e4ca;
-  animation: cursorBlink 1.4s steps(2, start) infinite;
-}
-.journalCard {
-  position: absolute;
-  z-index: 2;
-  top: 64px;
-  left: -8px;
-  width: 218px;
-  height: 306px;
-  padding: 17px 19px;
-  border-radius: 7px;
-  background: #f5eee5;
-  color: #283934;
-  box-shadow: 0 24px 65px #0c186555;
-  transform: rotate(-11deg);
-  animation: journalFloat 11s ease-in-out infinite;
-}
-.journalTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font:
-    7px/1.6 Consolas,
-    monospace;
-  letter-spacing: 0.04em;
-}
-.journalTop > span:last-child {
-  font-size: 17px;
-}
-.journalArt {
-  position: relative;
-  height: 98px;
-  margin: 16px 0;
-  overflow: hidden;
-  background: #b5cdb8;
-  border-radius: 80px 80px 0 0;
-}
-.journalArt > span {
-  position: absolute;
-  left: 58px;
-  top: -12px;
-  width: 62px;
-  height: 160px;
-  border: 1px solid #3d665855;
-  border-radius: 50%;
-  transform: rotate(-30deg);
-}
-.journalArt > span:nth-child(2) {
-  transform: rotate(0);
-}
-.journalArt > span:nth-child(3) {
-  transform: rotate(30deg);
-}
-.journalCard > small {
-  display: block;
-  font:
-    6px/1.8 Consolas,
-    monospace;
-  letter-spacing: 0.06em;
-  color: #52675d;
-}
-.journalCard > strong {
-  display: block;
-  font-size: 21px;
-  line-height: 1.55;
-  font-weight: 550;
-  letter-spacing: -0.05em;
-  margin-top: 6px;
-}
-.journalRule {
-  height: 1px;
-  background: #28393433;
-  margin: 14px 0 10px;
-}
-.journalBottom {
-  font:
-    6px Consolas,
-    monospace;
-  letter-spacing: 0.14em;
-}
-.sceneTag {
-  position: absolute;
-  right: 22px;
-  bottom: 4px;
-  background: #ffffff15;
-  border: 1px solid #ffffff33;
-  border-radius: 100px;
-  padding: 10px 17px;
-  font-size: 10px;
-  color: #e9edff;
-  transform: rotate(-4deg);
-  animation: tagFloat 9s ease-in-out infinite;
-}
-.sceneCross {
-  position: absolute;
-  left: 30px;
-  top: -5px;
-  color: #b9f4e2;
-  font-size: 34px;
-  font-weight: 300;
-  animation: crossTurn 20s linear infinite;
-}
-
 .explore {
   padding: 110px max(40px, calc((100vw - 1240px) / 2)) 120px;
   min-height: 100svh;
@@ -770,47 +529,7 @@
     transform: translate(3%, 2%) scale(1.08);
   }
 }
-@keyframes journalFloat {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-11deg);
-  }
-  50% {
-    transform: translateY(-18px) rotate(-7deg);
-  }
-}
-@keyframes codeFloat {
-  0%,
-  100% {
-    transform: translateY(0) rotate(7deg);
-  }
-  50% {
-    transform: translateY(14px) rotate(4deg);
-  }
-}
-@keyframes orbFloat {
-  0%,
-  100% {
-    transform: translateY(0) rotate(12deg);
-  }
-  50% {
-    transform: translateY(-18px) rotate(-4deg);
-  }
-}
-@keyframes tagFloat {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-4deg);
-  }
-  50% {
-    transform: translateY(8px) rotate(0);
-  }
-}
-@keyframes crossTurn {
-  to {
-    transform: rotate(360deg);
-  }
-}
+
 @keyframes statementFloat {
   0%,
   100% {
@@ -820,11 +539,7 @@
     transform: translateY(-12px);
   }
 }
-@keyframes cursorBlink {
-  50% {
-    opacity: 0;
-  }
-}
+
 @keyframes scrollHint {
   0%,
   100% {
@@ -835,11 +550,6 @@
   }
 }
 
-@media (min-width: 1600px) {
-  .scene {
-    transform: scale(1.08);
-  }
-}
 @media (max-width: 1100px) {
   .header {
     padding: 24px 32px;
@@ -851,22 +561,6 @@
   .heroInner {
     width: calc(100% - 80px);
     gap: 24px;
-  }
-  .scene {
-    transform: scale(0.85);
-    transform-origin: center;
-  }
-  .sceneOrbit {
-    left: -20px;
-  }
-  .codeWindow {
-    right: -35px;
-  }
-  .journalCard {
-    left: -30px;
-  }
-  .orb {
-    right: -15px;
   }
   .heroDescription {
     font-size: 13px;
@@ -926,38 +620,6 @@
   .heroCopy h1 {
     font-size: 64px;
     line-height: 1.25;
-  }
-  .scene {
-    width: 470px;
-    max-width: 100%;
-    height: 370px;
-    margin: auto;
-    transform: scale(0.9);
-    transform-origin: center top;
-  }
-  .sceneOrbit {
-    height: 350px;
-    width: 350px;
-    left: 60px;
-  }
-  .codeWindow {
-    right: -10px;
-    top: 100px;
-    height: 232px;
-  }
-  .journalCard {
-    left: 0;
-    top: 22px;
-  }
-  .orb {
-    top: -35px;
-    right: 18px;
-    width: 142px;
-    height: 142px;
-  }
-  .sceneTag {
-    bottom: 0;
-    right: 20px;
   }
   .heroBottom {
     width: calc(100% - 48px);
@@ -1087,99 +749,6 @@
   .heroNote {
     font-size: 9px;
   }
-  .scene {
-    width: 327px;
-    height: 274px;
-    transform: none;
-  }
-  .sceneOrbit {
-    width: 250px;
-    height: 250px;
-    left: 32px;
-    top: 5px;
-  }
-  .journalCard {
-    left: 2px;
-    top: 26px;
-    width: 148px;
-    height: 214px;
-    padding: 11px 13px;
-  }
-  .journalTop {
-    font-size: 5px;
-  }
-  .journalTop > span:last-child {
-    font-size: 12px;
-  }
-  .journalArt {
-    height: 62px;
-    margin: 10px 0;
-  }
-  .journalArt > span {
-    left: 33px;
-    height: 110px;
-    width: 50px;
-  }
-  .journalCard > small {
-    font-size: 4px;
-  }
-  .journalCard > strong {
-    font-size: 15px;
-  }
-  .journalRule {
-    margin: 10px 0 6px;
-  }
-  .journalBottom {
-    font-size: 4px;
-  }
-  .codeWindow {
-    width: 218px;
-    height: 170px;
-    top: 83px;
-    right: -8px;
-    border-radius: 8px;
-  }
-  .windowBar {
-    height: 28px;
-    padding: 0 10px;
-  }
-  .windowBar small {
-    font-size: 6px;
-  }
-  .codeLines {
-    font-size: 8px;
-    padding: 14px;
-  }
-  .codeLines .codeComment {
-    font-size: 7px;
-    margin-top: 5px;
-  }
-  .codeCursor {
-    bottom: 12px;
-    right: 15px;
-    height: 8px;
-    width: 4px;
-  }
-  .orb {
-    width: 106px;
-    height: 106px;
-    right: 10px;
-    top: 0;
-  }
-  .orb > span {
-    font-size: 18px;
-  }
-  .sceneTag {
-    font-size: 7px;
-    padding: 7px 10px;
-    bottom: 3px;
-    right: 10px;
-  }
-  .sceneCross {
-    font-size: 24px;
-    top: 8px;
-    left: 8px;
-  }
   .heroBottom {
     min-height: 58px;
     width: calc(100% - 48px);
@@ -1295,10 +864,6 @@
   }
   .heroCopy h1 {
     font-size: 64px;
-  }
-  .scene {
-    height: 390px;
-    transform: scale(0.9);
   }
 }
 @media (prefers-reduced-motion: reduce) {

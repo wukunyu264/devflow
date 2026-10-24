@@ -59,7 +59,9 @@ npm run measure:first-load
 
 独立动态门户首页 + 原有社区页面：技术分类、搜索、Markdown 阅读与目录、创作编辑器、草稿、个人主页、点赞/收藏/关注/评论、深色模式与响应式布局。门户样式使用 CSS Modules 隔离，不修改后续页面的外观。
 
-技术栈：Next.js **16.4.2** App Router、React **19.3.1**、TypeScript strict、手写 CSS、Lucide **1.61.0**、CodeMirror、react-markdown、Zod、Sonner。已移除 Tailwind 构建依赖；保留附 MIT 许可的独立浏览器 reset，保持原有样式。
+首页使用 Three.js 知识星球和 D3 标签关系图：3D 模块在首屏内容显示后延迟加载，支持鼠标轻微跟随、暂停、离屏停止与静态降级；标签地图进入附近视区后读取 `/api/topics`，展示真实标签共同出现的关系，点击可查看相关文章并进入现有文章页。手机采用竖向布局，最多展示 12 个节点，桌面最多 20 个；D3 只计算固定次数的布局，不持续运行模拟。
+
+技术栈：Next.js **16.4.2** App Router、React **19.3.1**、TypeScript strict、Three.js、D3 force、手写 CSS、Lucide **1.61.0**、CodeMirror、react-markdown、Zod、Sonner。已移除 Tailwind 构建依赖；保留附 MIT 许可的独立浏览器 reset，保持原有样式。
 
 | 文件 | 用途 |
 | --- | --- |
@@ -67,6 +69,9 @@ npm run measure:first-load
 | `src/lib/store.ts` / `community.ts` / `page-data.ts` | 有界投影、当前文章正文、请求内 React cache |
 | `src/app/[[...path]]/page.tsx` | 路由校验、metadata、Article JSON-LD |
 | `src/components/landing.tsx` / `landing-motion.tsx` / `landing.module.css` | 全屏动态门户、暂停/离屏控制、独立样式 |
+| `src/components/landing-universe.tsx` / `universe-engine.ts` | 按需加载的 Three.js 场景、静态降级、GPU 资源释放 |
+| `src/components/landing-topics.tsx` / `topic-layout.ts` / `src/lib/topic-graph.ts` | D3 标签图、相关文章导航、公开标签聚合 |
+| `src/app/api/topics/route.ts` | 匿名只读标签数据；复用公开缓存失效，不返回正文或会话 |
 | `src/app/sitemap.ts` / `robots.ts` / `opengraph-image.tsx` | SEO |
 | `supabase/001_schema.sql` / `002_seed.sql` | 新项目建表、原始种子 |
 | `supabase/003_extra_content.sql` | 可选 5 位展示作者 / 20 篇演示文章，无登录账号 |
@@ -78,6 +83,7 @@ npm run measure:first-load
 - 账号后台与真实邮箱操作由维护者完成。公开版本以部署后 `npm test` 和双账号流程确认，不能仅凭本地通过判断。
 - 主题脚本位于 head 且在 body 绘制前执行，但 React 把 stylesheet 排到脚本前，因此字面“脚本在 CSS 前”的要求尚未达到；深色偏好逻辑已测试，真实浏览器无白闪仍需确认。
 - 社区快照最多 200 篇文章、200 位作者，互动表最多各 500 行；搜索范围为标题、摘要、标签与作者，不再搜索正文。大规模分页与全文搜索不属于本次范围。sitemap 以 500 条一批读取全部已发布文章。
+- 首页知识地图基于最近 120 篇已发布文章，最多显示 20 个常用标签和 80 条连线；标签数与文章数属于这个样本范围。未编造标签或关联；无标签、请求失败和禁用 JavaScript 时保留社区入口。不支持 WebGL 时展示静态星球。
 - 一篇文章页只有一次社区快照装载，metadata 与 Page 共享；该快照仍由多个有界表查询组成，不能称为“一条 SQL”。
 - 阅读量仅统计登录用户，每用户/文章/UTC 日期最多一次；匿名阅读正常展示，不增加计数。
 - 云端 access JWT 不能靠清 Cookie 即时失效。迁移通过 `auth.sessions` 检查及 restrictive RLS 拒绝已退出会话；GoTrue 退出失败不会被报告成功。自然过期的 SSR 会话不会写 Cookie，需重新登录或由 API 刷新。
