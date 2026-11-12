@@ -1,0 +1,36 @@
+.pending {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 1000;
+  pointer-events: none;
+}
+.bar {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, #2445dc, #93baff, #2445dc);
+  background-size: 200% 100%;
+  animation: travel 1s linear infinite;
+}
+.message {
+  position: absolute;
+  right: 18px;
+  top: 14px;
+  border: 1px solid #dce3f2;
+  border-radius: 20px;
+  padding: 8px 14px;
+  background: #f8faff;
+  color: #253047;
+  font: 12px/1.5 sans-serif;
+  box-shadow: 0 3px 16px #14244312;
+}
+@keyframes travel {
+  to {
+    background-position: 200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation: none;
+  }
+}

@@ -48,6 +48,18 @@ export async function newLocalSession(id: string) {
   ).run(digest(token), id, new Date(Date.now() + 30 * 86400000).toISOString());
   await setSession(token);
 }
+async function checkCloudSession(
+  token: string,
+): Promise<"active" | "revoked" | "unavailable"> {
+  try {
+    const { data, error } = await cloudClient(token).rpc(
+      "devflow_session_active",
+    );
+    return error ? "unavailable" : data === true ? "active" : "revoked";
+  } catch {
+    return "unavailable";
+  }
+}
 export async function context(writeCookies = true): Promise<{
   user: Profile | null;
   store: Store;
@@ -56,8 +68,12 @@ export async function context(writeCookies = true): Promise<{
   let token = jar.get("df_session")?.value;
   if (!token) return { user: null, store: new Store() };
   let userId: string | undefined;
+  let sessionCheck: ReturnType<typeof checkCloudSession> | undefined;
   if (isCloud) {
     const auth = cloudClient();
+    // Both endpoints independently verify the signed token. Start the database
+    // revocation check alongside GoTrue, but trust neither until both succeed.
+    sessionCheck = checkCloudSession(token);
     const { data, error } = await auth.auth.getUser(token);
     userId = data.user?.id;
     if (error) {
@@ -69,6 +85,7 @@ export async function context(writeCookies = true): Promise<{
         if (result.data.session) {
           token = result.data.session.access_token;
           userId = result.data.user?.id;
+          sessionCheck = checkCloudSession(token);
           await setSession(token, result.data.session.refresh_token);
         }
       }
@@ -80,9 +97,12 @@ export async function context(writeCookies = true): Promise<{
     userId = row?.user_id as string | undefined;
   }
   if (isCloud && userId && token) {
-    const {data,error} = await cloudClient(token).rpc("devflow_session_active");
-    if (error) throw new Error("Session validation unavailable. Apply supabase/004_production_hardening.sql.");
-    if (data !== true) userId = undefined;
+    const status = await sessionCheck;
+    if (status !== "active" && status !== "revoked")
+      throw new Error(
+        "Session validation unavailable. Apply supabase/004_production_hardening.sql.",
+      );
+    if (status !== "active") userId = undefined;
   }
   const store = new Store(userId ? token : undefined);
   const user = userId
@@ -106,17 +126,29 @@ export async function logout() {
     if (verified.error) {
       const refresh = jar.get("df_refresh")?.value;
       if (refresh) {
-        const renewed = await auth.auth.refreshSession({refresh_token:refresh});
-        if (renewed.error && (![400,401,403].includes(renewed.error.status ?? 0))) throw new Error("云端退出暂时失败，请重试。");
+        const renewed = await auth.auth.refreshSession({
+          refresh_token: refresh,
+        });
+        if (
+          renewed.error &&
+          ![400, 401, 403].includes(renewed.error.status ?? 0)
+        )
+          throw new Error("云端退出暂时失败，请重试。");
         activeToken = renewed.data.session?.access_token || "";
-      } else if (![401,403,404].includes(verified.error.status ?? 0)) {
+      } else if (![401, 403, 404].includes(verified.error.status ?? 0)) {
         throw new Error("云端退出暂时失败，请重试。");
       } else activeToken = "";
     }
     if (activeToken) {
-      const {error} = await auth.auth.admin.signOut(activeToken, "local");
-      const revoked = await cloudClient(activeToken).rpc("devflow_session_active");
-      if (revoked.error || revoked.data !== false || (error && ![401,403,404].includes(error.status ?? 0)))
+      const { error } = await auth.auth.admin.signOut(activeToken, "local");
+      const revoked = await cloudClient(activeToken).rpc(
+        "devflow_session_active",
+      );
+      if (
+        revoked.error ||
+        revoked.data !== false ||
+        (error && ![401, 403, 404].includes(error.status ?? 0))
+      )
         throw new Error("云端会话尚未确认撤销，请重试退出。");
     }
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { IntentLink as Link } from "./intent-link";
 import { useEffect, useRef, useState } from "react";
 import type { TopicGraph } from "@/lib/topic-graph";
 import { categories } from "@/lib/types";
@@ -303,7 +303,6 @@ export function LandingTopics() {
               <Link
                 href={`/article/${article.id}#top`}
                 key={article.id}
-                prefetch={false}
               >
                 <span className={styles.relatedIndex}>0{index + 1}</span>
                 <div>
@@ -334,7 +333,6 @@ export function LandingTopics() {
                 ? `/search?q=${encodeURIComponent(selected.label)}#top`
                 : "/community#top"
             }
-            prefetch={false}
           >
             {selected ? "继续探索这个话题" : "浏览全部文章"}
             <span>→</span>

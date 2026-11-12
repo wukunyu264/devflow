@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "./intent-link";
 import type { ComponentProps } from "react";
 import { LandingMotion } from "./landing-motion";
 import { LandingUniverse } from "./landing-universe";

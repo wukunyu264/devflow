@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { IntentLink as Link } from "./intent-link";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,

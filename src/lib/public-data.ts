@@ -4,6 +4,7 @@ import { getCommunity } from "./community";
 import { backendConfig } from "./backend";
 import { Store } from "./store";
 import { buildTopicGraph } from "./topic-graph";
+import type { Article, Comment } from "./types";
 
 const tag = "devflow-public-community";
 // Separate databases (including isolated test SQLite files) must not share entries.
@@ -18,16 +19,40 @@ const source = createHash("sha256")
     ]),
   )
   .digest("hex");
+// Share the bounded feed/sidebar data across articles. Previously every article
+// cache miss repeated the feed, author, like and follow queries.
+const community = unstable_cache(
+  async () => getCommunity(undefined, null),
+  ["devflow-public-feed-v2", source],
+  { revalidate: 60, tags: [tag] },
+);
 const snapshot = unstable_cache(
-  async (articleId: string) =>
-    getCommunity(undefined, null, articleId || undefined),
-  ["devflow-public-v1", source],
+  async (articleId: string) => {
+    if (process.env.DATA_TRACE === "1")
+      console.info("[DevFlow data] community snapshot");
+    const store = new Store();
+    const [articles, comments] = await Promise.all([
+      store.list<Article>(
+        "articles",
+        { id: articleId, status: "published" },
+        1,
+      ),
+      store.list<Comment>("comments", { article_id: articleId }),
+    ]);
+    const article = articles[0] ?? null;
+    return { article, comments: article ? comments : [] };
+  },
+  ["devflow-public-detail-v3", source],
   { revalidate: 60, tags: [tag] },
 );
 
 // Only a fresh anonymous Store is used inside this cache. No JWT/cookies/private drafts.
-export function getPublicCommunity(articleId?: string) {
-  return snapshot(articleId ?? "");
+export async function getPublicCommunity(articleId?: string) {
+  if (!articleId) return community();
+  // Resolve sibling caches here: Next bypasses inner unstable_cache lookups
+  // when they are invoked inside another cached function.
+  const [base, detail] = await Promise.all([community(), snapshot(articleId)]);
+  return { ...base, ...detail };
 }
 // Uses the same anonymous cache scope/invalidation as published articles.
 // The homepage requests it only when its map approaches the viewport.

@@ -61,6 +61,15 @@ try {
     await new Promise(resolveFlush => setImmediate(resolveFlush));
     assert.equal((output.slice(warmStart).match(/\[DevFlow query\]/g) || []).length,0,'Warm anonymous article must reuse the public cache');
     console.log('Warm anonymous article SSR: zero database queries; mutations invalidate the shared public tag.');
+    const nextStart = output.length;
+    const nextArticle = await fetch(testEnv.TEST_BASE_URL + '/article/' + snapshot.articles[1].id);
+    assert.equal(nextArticle.status,200);
+    await nextArticle.text();
+    await new Promise(resolveFlush => setImmediate(resolveFlush));
+    const nextTrace = output.slice(nextStart);
+    assert.equal((nextTrace.match(/\[DevFlow query\]/g) || []).length,2,'A new article must reuse the feed/sidebar and query only its body/comments');
+    assert.equal((nextTrace.match(/\[DevFlow query\] articles\b/g) || []).length,1);
+    console.log('Different article SSR: 2 bounded queries; shared feed/authors/reactions are reused.');
     const portalTraceStart = output.length;
     const portal = await fetch(testEnv.TEST_BASE_URL).then(response => response.text());
     await new Promise(resolveFlush => setImmediate(resolveFlush));
@@ -71,7 +80,7 @@ try {
     const measured = await new Promise(resolveExit => measurement.on('exit',code => resolveExit(code ?? 1)));
     assert.equal(measured,0,'Production first-load measurement failed');
   }
-  const testFiles = ['tests/backend.test.mjs','tests/database.test.mjs','tests/public.test.mjs','tests/community.test.mjs','tests/article-rendering.test.mjs','tests/auth-api.test.mjs','tests/landing.test.mjs'];
+  const testFiles = ['tests/backend.test.mjs','tests/database.test.mjs','tests/public.test.mjs','tests/community.test.mjs','tests/article-rendering.test.mjs','tests/auth-api.test.mjs','tests/landing.test.mjs','tests/auth-context.test.mjs','tests/intent-link.test.mjs'];
   if (local) testFiles.push('tests/startup.test.mjs');
   const child = spawn(process.execPath, ['--test',...testFiles], {
     env:testEnv, stdio:'inherit', windowsHide:true,

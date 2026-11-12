@@ -80,6 +80,9 @@ export function CommunityProvider({
       try {
         await request(action, payload);
         await refresh();
+        // Discard prefetched RSC snapshots after writes/logout. Otherwise a
+        // prefetched page could restore stale reactions or a previous identity.
+        router.refresh();
         if (message) toast.success(message);
         return true;
       } catch (e) {
