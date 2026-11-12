@@ -9,6 +9,12 @@ type Props = Omit<ComponentProps<typeof Link>, "href" | "prefetch"> & {
   href: string;
 };
 
+function preloadReader(href: string) {
+  if (!href.startsWith("/article/")) return;
+  void import("./article-detail").catch(() => {});
+  void import("./markdown").catch(() => {});
+}
+
 function PendingHint() {
   const { pending } = useLinkStatus();
   return pending
@@ -31,6 +37,7 @@ export function IntentLink({
   onMouseLeave,
   onFocus,
   onTouchStart,
+  onClick,
   ...props
 }: Props) {
   const [intent, setIntent] = useState(false);
@@ -50,10 +57,7 @@ export function IntentLink({
       return;
     // Fetch the reading chunks in parallel with the RSC payload, instead of
     // waiting for navigation -> ArticleDetail -> Markdown to load in sequence.
-    if (href.startsWith("/article/")) {
-      void import("./article-detail").catch(() => {});
-      void import("./markdown").catch(() => {});
-    }
+    preloadReader(href);
     setIntent(true);
   };
   return (
@@ -61,6 +65,23 @@ export function IntentLink({
       {...props}
       href={href}
       prefetch={intent}
+      onClick={(event) => {
+        onClick?.(event);
+        if (
+          !event.defaultPrevented &&
+          event.button === 0 &&
+          !event.metaKey &&
+          !event.ctrlKey &&
+          !event.shiftKey &&
+          !event.altKey &&
+          (!event.currentTarget.target ||
+            event.currentTarget.target === "_self")
+        ) {
+          // A fast tap/programmatic click may have no hover or touch lead time.
+          // Start the required reader chunks now, alongside the route request.
+          preloadReader(href);
+        }
+      }}
       onMouseEnter={(event) => {
         onMouseEnter?.(event);
         cancel();
