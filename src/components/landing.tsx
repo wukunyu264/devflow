@@ -99,10 +99,7 @@ const destinations = [
 
 export function Landing() {
   return (
-    <LandingMotion
-      className={styles.root}
-      controlClassName={styles.motionControl}
-    >
+    <LandingMotion className={styles.root}>
       <header className={styles.header}>
         <Brand />
         <nav aria-label="首页导航" className={styles.nav}>

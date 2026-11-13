@@ -2,7 +2,7 @@
 
 **线上地址：[https://boisterous-cascaron-44d48a.netlify.app](https://boisterous-cascaron-44d48a.netlify.app)**
 
-首页为全屏动态门户；点击「进入技术社区」，或直接打开 [文章信息流](https://boisterous-cascaron-44d48a.netlify.app/community)。首页动画可暂停，并尊重系统的减少动态效果偏好。
+首页为全屏动态门户；点击「进入技术社区」，或直接打开 [文章信息流](https://boisterous-cascaron-44d48a.netlify.app/community)。首页动画在离屏和后台时自动停止，并尊重系统的减少动态效果偏好。
 
 源码：[wukunyu264/devflow](https://github.com/wukunyu264/devflow)。实际部署平台为 **Netlify**，数据库与认证为 **Supabase**。
 
@@ -59,9 +59,9 @@ npm run measure:first-load
 
 独立动态门户首页 + 原有社区页面：技术分类、搜索、Markdown 阅读与目录、创作编辑器、草稿、个人主页、点赞/收藏/关注/评论、深色模式与响应式布局。门户样式使用 CSS Modules 隔离，不修改后续页面的外观。
 
-首页使用 Three.js 知识星球和 D3 标签关系图：3D 模块在首屏内容显示后延迟加载，支持鼠标轻微跟随、暂停、离屏停止与静态降级；标签地图进入附近视区后读取 `/api/topics`，展示真实标签共同出现的关系，点击可查看相关文章并进入现有文章页。手机采用竖向布局，最多展示 12 个节点，桌面最多 20 个；D3 只计算固定次数的布局，不持续运行模拟。
+首页使用 Three.js 知识星球和 D3 标签关系图：3D 模块在首屏内容显示后延迟加载，支持鼠标轻微跟随、离屏和后台停止与静态降级；标签地图进入附近视区后读取 `/api/topics`，展示真实标签共同出现的关系，点击可查看相关文章并进入现有文章页。手机采用竖向布局，最多展示 12 个节点，桌面最多 20 个；D3 只计算固定次数的布局，不持续运行模拟。
 
-内容链接在鼠标停留 100ms、键盘聚焦或触摸时才开启完整预取，并并行加载文章与 Markdown 组件；省流模式和 2G 网络不做推测加载。未完成预取时，点击会显示导航反馈，不引入影响 HTTP 404 的全局 loading 边界。匿名文章拆分共享社区缓存和单篇正文/评论缓存；共享缓存命中时，首次打开另一篇文章仅查询正文和评论，重复访问不再读库。登录身份与服务端会话吊销检查并行，二者都通过才读取用户资料；私人数据不进入公共缓存。
+内容链接在鼠标停留 100ms、键盘聚焦或触摸时才开启完整预取，并并行加载文章与 Markdown 组件；省流模式和 2G 网络不做推测加载。页面切换不显示悬浮加载提示，也不引入影响 HTTP 404 的全局 loading 边界。匿名文章拆分共享社区缓存和单篇正文/评论缓存；共享缓存命中时，首次打开另一篇文章仅查询正文和评论，重复访问不再读库。登录身份与服务端会话吊销检查并行，二者都通过才读取用户资料；私人数据不进入公共缓存。
 
 技术栈：Next.js **16.4.2** App Router、React **19.3.1**、TypeScript strict、Three.js、D3 force、手写 CSS、Lucide **1.61.0**、CodeMirror、react-markdown、Zod、Sonner。已移除 Tailwind 构建依赖；保留附 MIT 许可的独立浏览器 reset，保持原有样式。
 
@@ -70,8 +70,8 @@ npm run measure:first-load
 | `src/lib/backend.ts` / `src/instrumentation.ts` | 显式后端选择、启动检查 |
 | `src/lib/store.ts` / `community.ts` / `page-data.ts` | 有界投影、当前文章正文、请求内 React cache |
 | `src/app/[[...path]]/page.tsx` | 路由校验、metadata、Article JSON-LD |
-| `src/components/landing.tsx` / `landing-motion.tsx` / `landing.module.css` | 全屏动态门户、暂停/离屏控制、独立样式 |
-| `src/components/intent-link.tsx` | 按用户意图预取、并行预加载阅读组件、导航等待反馈 |
+| `src/components/landing.tsx` / `landing-motion.tsx` / `landing.module.css` | 全屏动态门户、离屏/后台控制、独立样式 |
+| `src/components/intent-link.tsx` | 按用户意图预取、并行预加载阅读组件 |
 | `src/components/landing-universe.tsx` / `universe-engine.ts` | 按需加载的 Three.js 场景、静态降级、GPU 资源释放 |
 | `src/components/landing-topics.tsx` / `topic-layout.ts` / `src/lib/topic-graph.ts` | D3 标签图、相关文章导航、公开标签聚合 |
 | `src/app/api/topics/route.ts` | 匿名只读标签数据；复用公开缓存失效，不返回正文或会话 |

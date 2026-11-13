@@ -1,9 +1,7 @@
 "use client";
 
-import Link, { useLinkStatus } from "next/link";
-import { createPortal } from "react-dom";
+import Link from "next/link";
 import { useEffect, useRef, useState, type ComponentProps } from "react";
-import styles from "./intent-link.module.css";
 
 type Props = Omit<ComponentProps<typeof Link>, "href" | "prefetch"> & {
   href: string;
@@ -13,19 +11,6 @@ function preloadReader(href: string) {
   if (!href.startsWith("/article/")) return;
   void import("./article-detail").catch(() => {});
   void import("./markdown").catch(() => {});
-}
-
-function PendingHint() {
-  const { pending } = useLinkStatus();
-  return pending
-    ? createPortal(
-        <span className={styles.pending} role="status">
-          <span className={styles.bar} aria-hidden="true" />
-          <span className={styles.message}>正在打开页面…</span>
-        </span>,
-        document.body,
-      )
-    : null;
 }
 
 // Dynamic catch-all pages have no loading boundary (to preserve HTTP 404).
@@ -103,7 +88,6 @@ export function IntentLink({
       }}
     >
       {children}
-      <PendingHint />
     </Link>
   );
 }

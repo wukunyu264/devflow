@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  createContext,
-  useContext,
   useEffect,
   useRef,
   useState,
@@ -10,13 +8,10 @@ import {
   type RefObject,
 } from "react";
 
-const MotionPaused = createContext(false);
-
 export function useVisualActivity(
   ref: RefObject<HTMLElement | null>,
   rootMargin = "0px",
 ) {
-  const paused = useContext(MotionPaused);
   const [activity, setActivity] = useState({
     visible: false,
     hidden: false,
@@ -51,22 +46,18 @@ export function useVisualActivity(
   }, [ref, rootMargin]);
   return {
     visible: activity.visible,
-    animate:
-      activity.visible && !activity.hidden && !activity.reduced && !paused,
+    animate: activity.visible && !activity.hidden && !activity.reduced,
   };
 }
 
 export function LandingMotion({
   children,
   className,
-  controlClassName,
 }: {
   children: ReactNode;
   className: string;
-  controlClassName: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     const container = root.current;
@@ -113,32 +104,8 @@ export function LandingMotion({
   }, []);
 
   return (
-    <MotionPaused.Provider value={paused}>
-      <div
-        ref={root}
-        className={className}
-        data-landing-root
-        data-user-paused={paused}
-      >
-        {children}
-        <button
-          className={controlClassName}
-          onClick={() => setPaused((value) => !value)}
-          aria-label={paused ? "播放首页动画" : "暂停首页动画"}
-          aria-pressed={paused}
-        >
-          {paused ? (
-            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-              <path d="m5 3 8 5-8 5Z" fill="currentColor" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-              <path d="M4 3h3v10H4zm5 0h3v10H9z" fill="currentColor" />
-            </svg>
-          )}
-          <span>{paused ? "播放动画" : "暂停动画"}</span>
-        </button>
-      </div>
-    </MotionPaused.Provider>
+    <div ref={root} className={className} data-landing-root>
+      {children}
+    </div>
   );
 }
